@@ -5,7 +5,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
 import { Vector3, type Group, type Mesh } from 'three';
-import { AGENTS, TASK_COLORS } from '../sim/data';
+import { AGENTS } from '../sim/data';
 import { station } from '../sim/layout';
 import type { AgentId } from '../sim/types';
 import { sim, useSim, useUI } from '../state/store';
@@ -38,7 +38,8 @@ export function Agent({ id }: { id: AgentId }) {
     bob.current.position.y = 0.1 + Math.sin(t * (moving ? 9 : 2)) * (moving ? 0.03 : 0.025);
     bob.current.rotation.x = moving ? 0.1 : 0;
     head.current.rotation.x += ((working ? 0.32 : 0) - head.current.rotation.x) * 0.1;
-    head.current.rotation.y = working ? Math.sin(t * 1.3) * 0.18 : 0;
+    // Working: small glances at the screen. Idle: slowly looking around the room.
+    head.current.rotation.y = working ? Math.sin(t * 1.3) * 0.18 : ag.activity === 'idle' ? Math.sin(t * 0.35) * 0.5 : 0;
     eyes.current.scale.y = Math.sin(t * 0.9) > 0.985 ? 0.1 : 1; // blink
     (tip.current.material as unknown as { emissiveIntensity: number }).emissiveIntensity = working ? 1.2 + Math.sin(t * 8) * 0.8 : 0.3;
     const carrying = ag.activity === 'carrying';
@@ -119,7 +120,9 @@ export function Packet({ id }: { id: string }) {
   const t = state.tasks.find((x) => x.id === id);
   const selected = useUI((s) => s.selected?.kind === 'task' && s.selected.id === id);
   const select = useUI((s) => s.select);
-  const color = TASK_COLORS[(t?.colorIndex ?? 0) % TASK_COLORS.length];
+  // Requests are neutral paper boxes so they never borrow an agent's colour; red means it needs you.
+  const alert = t?.status === 'awaiting-approval';
+  const color = alert ? '#D93A3F' : '#FFFFFF';
 
   useFrame(({ clock }, dt) => {
     const task = sim.task(id);
@@ -162,17 +165,17 @@ export function Packet({ id }: { id: string }) {
           onPointerOver={() => hover(true)}
           onPointerOut={() => hover(false)}
         >
-          <RoundedBox args={[0.34, 0.26, 0.3]} radius={0.04} castShadow>
-            <meshStandardMaterial color={color} roughness={0.4} emissive={color} emissiveIntensity={t.held ? 0 : 0.12} transparent={t.held} opacity={t.held ? 0.45 : 1} />
+          <RoundedBox args={[0.4, 0.28, 0.34]} radius={0.04} castShadow>
+            <meshStandardMaterial color={color} roughness={0.5} emissive={color} emissiveIntensity={alert ? 0.35 : 0.05} transparent={t.held} opacity={t.held ? 0.4 : 1} />
           </RoundedBox>
           <mesh position={[0, 0.02, 0]}>
-            <boxGeometry args={[0.345, 0.07, 0.305]} />
-            <meshStandardMaterial color="#fff" roughness={0.5} />
+            <boxGeometry args={[0.405, 0.07, 0.345]} />
+            <meshStandardMaterial color={alert ? '#FFFFFF' : '#14233B'} roughness={0.5} transparent={t.held} opacity={t.held ? 0.4 : 1} />
           </mesh>
         </group>
         <mesh ref={halo} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.12, 0]} visible={false}>
           <ringGeometry args={[0.3, 0.37, 32]} />
-          <meshBasicMaterial color={t.status === 'awaiting-approval' ? '#E5484D' : '#14233B'} transparent opacity={0.9} />
+          <meshBasicMaterial color={alert ? '#D93A3F' : '#14233B'} transparent opacity={0.9} />
         </mesh>
         <group ref={anchorRef(`task:${id}`)} position={[0, 0.2, 0]} />
       </group>

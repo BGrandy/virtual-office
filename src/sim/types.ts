@@ -29,6 +29,35 @@ export interface Output {
   body: string;
   t: number;
   kind?: 'ok' | 'changes';
+  /** Who wrote the text: a script, a live model, or the supervisor. */
+  source?: 'script' | 'ai' | 'human' | 'fallback';
+  model?: string;
+}
+
+/** How a task's stage work is produced. */
+export type ExecMode = 'script' | 'ai';
+
+/** Result of one live model call for one stage pass. Written by the AI layer, read by the engine. */
+export interface AIStageResult {
+  status: 'pending' | 'done' | 'error';
+  steps?: string[];
+  body?: string;
+  verdict?: 'pass' | 'changes' | 'escalate';
+  risky?: boolean;
+  riskReason?: string;
+  priority?: Priority;
+  error?: string;
+  model?: string;
+  logged?: boolean;
+}
+
+/** One visit to one stage. Drives the dashboard: wait = started - arrived, work = finished - started. */
+export interface StageSpan {
+  stage: Stage;
+  owner: Actor | 'archive';
+  arrived: number;
+  started?: number;
+  finished?: number;
 }
 
 export interface Handoff {
@@ -62,6 +91,14 @@ export interface Task {
   next?: { stage: Stage; ownerId: Actor; kind: Handoff['kind']; note?: string };
   history: Handoff[];
   outputs: Output[];
+  timeline: StageSpan[];
+  mode: ExecMode;
+  /** Live model results keyed by `${stage}:${rework}`. */
+  ai: Record<string, AIStageResult>;
+  /** Why this task stopped for approval, set when it is gated. */
+  riskReason?: string;
+  /** Set when the live planner flags the work as risky. */
+  aiRisky?: boolean;
   createdAt: number;
   completedAt?: number;
 }
@@ -78,12 +115,14 @@ export interface AgentState {
   /** Short line shown in the agent's speech bubble. */
   say?: string;
   stagesCompleted: number;
+  /** Simulated seconds spent working or carrying. */
+  busy: number;
 }
 
 export type EventType =
   | 'created' | 'started' | 'step' | 'output' | 'handoff' | 'rework'
   | 'approval-requested' | 'approved' | 'rejected' | 'completed'
-  | 'held' | 'resumed' | 'cancelled' | 'reassigned' | 'policy';
+  | 'held' | 'resumed' | 'cancelled' | 'reassigned' | 'policy' | 'ai-error';
 
 export interface SimEvent {
   id: number;

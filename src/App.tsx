@@ -1,8 +1,12 @@
-import { Component, type ReactNode } from 'react';
-import { Scene } from './scene/Scene';
+import { Component, Suspense, lazy, type ReactNode } from 'react';
 import { Dialogs } from './ui/Dialogs';
 import { Inspector } from './ui/Inspector';
 import { SceneLabels } from './ui/SceneLabels';
+import { Tour } from './ui/Tour';
+
+// three.js is most of the download, so the 3D office loads in its own chunk
+// while the panels and welcome screen appear straight away.
+const Scene = lazy(() => import('./scene/Scene'));
 import { AttentionBar, LeftPanel, TopBar } from './ui/Panels';
 
 /** If WebGL is unavailable the panels still work, so the workflow stays usable. */
@@ -28,7 +32,9 @@ export function App() {
     <div className="app">
       <div className="stage">
         <SceneBoundary>
-          <Scene />
+          <Suspense fallback={<div className="scene-loading"><i className="spinner" />Building the office</div>}>
+            <Scene />
+          </Suspense>
         </SceneBoundary>
         <SceneLabels />
       </div>
@@ -36,6 +42,7 @@ export function App() {
       <LeftPanel />
       <Inspector />
       <AttentionBar />
+      <Tour />
       <Dialogs />
     </div>
   );

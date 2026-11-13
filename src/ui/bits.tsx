@@ -7,12 +7,18 @@ export const clock = (t: number) => {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 };
 
+/** A length of time, e.g. "49s" or "2m 10s". */
+export const duration = (n: number) => {
+  const s = Math.floor(n);
+  return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+};
+
 export const actorColor = (a: Actor | 'archive') => (a === 'human' ? '#14233B' : a === 'archive' ? '#8FA1B8' : AGENTS[a as AgentId].color);
 
 /** One plain-language line describing where a task is right now. */
 export function statusText(t: Task): string {
   if (t.status === 'cancelled') return 'Cancelled by you';
-  if (t.status === 'done') return `Completed in ${clock((t.completedAt ?? 0) - t.createdAt)}`;
+  if (t.status === 'done') return `Completed in ${duration((t.completedAt ?? 0) - t.createdAt)}`;
   if (t.held) return 'On hold until you resume it';
   if (t.status === 'awaiting-approval') return 'Waiting for your approval';
   if (t.status === 'handoff' && t.next) {
@@ -21,7 +27,8 @@ export function statusText(t: Task): string {
     return `${actorName(t.ownerId)} is handing it to ${t.next.ownerId === 'human' ? 'you' : actorName(t.next.ownerId)}`;
   }
   if (t.status === 'queued') return `In ${actorName(t.ownerId)}'s tray, next up: ${STAGE_META[t.stage].label.toLowerCase()}`;
-  return `${actorName(t.ownerId)}: ${STAGE_META[t.stage].verb.toLowerCase()}`;
+  const pending = t.mode === 'ai' && t.stage !== 'approval' && t.stage !== 'done' && t.ai[`${t.stage}:${t.rework}`]?.status === 'pending' && t.progress >= 0.8;
+  return `${actorName(t.ownerId)}: ${pending ? 'waiting for the model' : STAGE_META[t.stage].verb.toLowerCase()}`;
 }
 
 export function ActorChip({ actor, small }: { actor: Actor | 'archive'; small?: boolean }) {
@@ -57,4 +64,4 @@ export const PriorityTag = ({ p }: { p: Task['priority'] }) => (
   <span className={`prio prio-${p}`} title={p === 'P1' ? 'Urgent' : p === 'P2' ? 'Normal' : 'Low'}>{p === 'P1' ? 'Urgent' : p === 'P2' ? 'Normal' : 'Low'}</span>
 );
 
-export const riskReason = (t: Task) => getTemplate(t.templateId).riskReason ?? (sim.state.policy === 'all' ? 'Your approval rule sends every task to you' : undefined);
+export const riskReason = (t: Task) => t.riskReason ?? getTemplate(t.templateId).riskReason ?? (sim.state.policy === 'all' ? 'Your approval rule sends every task to you' : undefined);

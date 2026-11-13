@@ -23,7 +23,7 @@ function ApprovalCard({ t }: { t: Task }) {
   return (
     <section className="approval">
       <h3>Your decision is needed</h3>
-      <p className="why"><strong>Why it stopped:</strong> {riskReason(t) ?? 'Flagged for approval'}.</p>
+      <p className="why"><strong>Why it stopped:</strong> {(riskReason(t) ?? 'Flagged for approval').replace(/\.$/, '')}.</p>
       {review && <pre className="quote">{review.body}</pre>}
       <label htmlFor="note">Note for the team (optional)</label>
       <textarea id="note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="For example: apply after 6 pm" />
@@ -60,6 +60,7 @@ function TaskInspector({ t }: { t: Task }) {
         </div>
         <h2>{t.title}</h2>
         <p className="meta">From {t.requester}, received at {clock(t.createdAt)}</p>
+        {t.mode === 'ai' && <p className="mode-line"><span className="mode-tag">Live AI</span> Each step is written by a real model. Actions are still simulated.</p>}
       </header>
 
       <Pipeline task={t} labels />
@@ -107,6 +108,11 @@ function TaskInspector({ t }: { t: Task }) {
               <span className="out-meta"><ActorChip actor={o.by} small /> <time>{clock(o.t)}</time></span>
             </summary>
             <pre>{o.body}</pre>
+            {o.source && o.source !== 'human' && (
+              <p className={`src src-${o.source}`}>
+                {o.source === 'ai' ? `Written by ${o.model ?? 'a live model'}` : o.source === 'fallback' ? 'Scripted fallback: the model call failed' : 'Scripted'}
+              </p>
+            )}
           </details>
         ))}
       </section>

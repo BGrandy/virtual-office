@@ -2,7 +2,7 @@
 // No language model is called anywhere in this demo.
 // In production each `StageScript` would be replaced by a real model call with tool use.
 
-import type { AgentId, Priority, Stage, Task, WorkStage } from './types';
+import type { AgentId, AIStageResult, Priority, Stage, Task, WorkStage } from './types';
 
 export interface AgentProfile {
   id: AgentId;
@@ -20,35 +20,35 @@ export interface AgentProfile {
 
 export const AGENTS: Record<AgentId, AgentProfile> = {
   iris: {
-    id: 'iris', name: 'Iris', role: 'Intake and triage', stage: 'triage', color: '#2F6BFF',
+    id: 'iris', name: 'Iris', role: 'Intake and triage', stage: 'triage', color: '#2A78D6',
     blurb: 'Reads every incoming request, works out what is being asked, how urgent it is, and who is affected.',
     skills: ['Classify requests', 'Set priority and SLA', 'Spot duplicates', 'Ask for missing details'],
     tools: ['Ticketing system (read, tag)', 'Staff directory (read)'],
     limits: 'Cannot change any system. Only labels and routes work.',
   },
   atlas: {
-    id: 'atlas', name: 'Atlas', role: 'Planner', stage: 'planning', color: '#7C5CFA',
+    id: 'atlas', name: 'Atlas', role: 'Planner', stage: 'planning', color: '#EB6834',
     blurb: 'Turns a triaged request into a short, checkable plan and flags any step that needs human sign-off.',
     skills: ['Break work into steps', 'Match runbooks', 'Flag risky changes', 'Estimate effort'],
     tools: ['Runbook library (read)', 'Asset inventory (read)'],
     limits: 'Plans only. Does not execute.',
   },
   bolt: {
-    id: 'bolt', name: 'Bolt', role: 'Technician', stage: 'execution', color: '#F2940A',
+    id: 'bolt', name: 'Bolt', role: 'Technician', stage: 'execution', color: '#1BAF7A',
     blurb: 'Carries out the plan: creates accounts, runs diagnostics, applies fixes, and records exactly what changed.',
     skills: ['Provision accounts', 'Run diagnostics', 'Apply fixes', 'Keep a change log'],
     tools: ['Identity provider (write)', 'Device management (write)', 'Network monitoring (read)', 'Mail security (write)'],
     limits: 'Changes marked risky are staged, not applied, until a person approves.',
   },
   sage: {
-    id: 'sage', name: 'Sage', role: 'Quality reviewer', stage: 'review', color: '#12A678',
+    id: 'sage', name: 'Sage', role: 'Quality reviewer', stage: 'review', color: '#6250D6',
     blurb: 'Checks the work against the plan and policy. Sends it back if something is missing, or escalates to a person.',
     skills: ['Verify against checklist', 'Policy and security checks', 'Request rework', 'Escalate for approval'],
     tools: ['Audit logs (read)', 'Policy library (read)'],
     limits: 'Independent of the technician. Cannot edit the work it reviews.',
   },
   echo: {
-    id: 'echo', name: 'Echo', role: 'Comms and records', stage: 'delivery', color: '#E5489B',
+    id: 'echo', name: 'Echo', role: 'Comms and records', stage: 'delivery', color: '#E87BA4',
     blurb: 'Writes the reply to the requester in plain language, updates the knowledge base, and closes the ticket.',
     skills: ['Write user replies', 'Update knowledge base', 'Close tickets', 'Summarise for managers'],
     tools: ['Email and chat (send)', 'Knowledge base (write)', 'Ticketing system (close)'],
@@ -80,7 +80,6 @@ export const STAGE_META: Record<Stage, { label: string; verb: string }> = {
 };
 export const PIPELINE: Stage[] = ['triage', 'planning', 'execution', 'review', 'approval', 'delivery'];
 
-export const TASK_COLORS = ['#2F6BFF', '#F2940A', '#12A678', '#E5489B', '#7C5CFA', '#0FA3B1'];
 
 export interface StageScript {
   steps: string[];
@@ -289,3 +288,15 @@ export function scriptFor(task: Task, stage: WorkStage): StageScript {
 
 /** True when the scripted reviewer will send this task back. */
 export const reviewWillFail = (task: Task) => !!getTemplate(task.templateId).rework && task.rework === 0;
+
+/** Title shown on each stage's output. */
+export function outputTitle(task: Task, stage: WorkStage, verdict?: AIStageResult['verdict']): string {
+  if (stage === 'triage') return 'Triage summary';
+  if (stage === 'planning') return 'Work plan';
+  if (stage === 'execution') return task.rework > 0 ? 'Change log, revised' : 'Change log';
+  if (stage === 'review') return verdict === 'changes' ? 'Changes requested' : verdict === 'escalate' ? 'Review result: needs a person' : 'Review result';
+  return task.requester === 'You' ? 'Reply to your request' : `Reply sent to ${task.requester}`;
+}
+
+/** The mix of requests used by "Simulate a busy morning". */
+export const BUSY_MORNING = ['lockout', 'phishing', 'onboarding', 'lockout', 'vpn', 'lockout', 'phishing', 'lockout'];

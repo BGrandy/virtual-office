@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Simulation } from './engine';
-import type { Task } from './types';
+import { BUSY_MORNING } from './data';
+import type { AIStageResult, Task, WorkStage } from './types';
 
 /** Run the simulation until `until` is true, failing if it takes too long. */
 function run(sim: Simulation, until: () => boolean, maxSeconds = 600) {
@@ -114,5 +115,105 @@ describe('workflow engine', () => {
     const t2 = restored.task(t.id)!;
     run(restored, () => t2.status === 'done');
     expect(t2.outputs).toHaveLength(5);
+  });
+});
+
+// ---------------------------------------------------------------- live AI path
+// A fake model stands in for the network so the orchestration rules can be tested exactly.
+
+type Fake = Partial<Record<WorkStage, Partial<AIStageResult>[]>>;
+function withFakeModel(fake: Fake, delayTicks = 3) {
+  const pending: { id: string; key: string; stage: WorkStage; due: number }[] = [];
+  const seen = new Set<string>();
+  const calls: string[] = [];
+  let tick = 0;
+  const sim = new Simulation(null, {
+    requestAI: (t, stage, key) => {
+      if (seen.has(t.id + key)) return;
+      seen.add(t.id + key);
+      calls.push(`${t.id}:${key}`);
+      pending.push({ id: t.id, key, stage, due: tick + delayTicks });
+    },
+  });
+  const step = sim.step.bind(sim);
+  sim.step = (dt: number) => {
+    tick++;
+    for (const p of pending.filter((x) => x.due <= tick)) {
+      pending.splice(pending.indexOf(p), 1);
+      const list = fake[p.stage] ?? [{}];
+      const n = calls.filter((c) => c.startsWith(p.id) && c.includes(`:${p.stage}:`)).length - 1;
+      const r = list[Math.min(n, list.length - 1)];
+      sim.provideAI(p.id, p.key, { status: 'done', steps: ['Step one', 'Step two'], body: `${p.stage} by model`, model: 'Fake 1', ...r });
+    }
+    step(dt);
+  };
+  return { sim, calls };
+}
+
+describe('live AI orchestration', () => {
+  it('waits for the model, then uses its output and labels it', () => {
+    const { sim, calls } = withFakeModel({}, 40);
+    const t = sim.createTask('custom', 'Printer on floor 2 is offline', 'ai');
+    run(sim, () => t.status === 'done');
+    expect(calls).toHaveLength(5);
+    expect(t.outputs.every((o) => o.source === 'ai' && o.model === 'Fake 1')).toBe(true);
+    expect(t.outputs[0].body).toBe('triage by model');
+  });
+
+  it('lets the model set priority and flag risk, but the orchestrator enforces the gate', () => {
+    const { sim } = withFakeModel({ triage: [{ priority: 'P1' }], planning: [{ risky: true, riskReason: 'Changes a server' }] });
+    const t = sim.createTask('custom', 'Reboot the file server', 'ai');
+    run(sim, () => t.status === 'awaiting-approval');
+    expect(t.priority).toBe('P1');
+    expect(t.riskReason).toBe('Changes a server');
+  });
+
+  it('allows one reviewer rework, then escalates to a person instead of looping', () => {
+    const { sim } = withFakeModel({ review: [{ verdict: 'changes' }, { verdict: 'changes' }] });
+    const t = sim.createTask('custom', 'Set up shared mailbox', 'ai');
+    run(sim, () => t.status === 'awaiting-approval');
+    expect(t.rework).toBe(1);
+    expect(t.riskReason).toMatch(/still not satisfied/);
+  });
+
+  it('a model "pass" cannot skip the approval gate on risky work', () => {
+    const { sim } = withFakeModel({ review: [{ verdict: 'pass' }] });
+    const t = sim.createTask('vpn', undefined, 'ai');
+    run(sim, () => t.status === 'awaiting-approval');
+    expect(t.stage).toBe('approval');
+  });
+
+  it('falls back to the script, and says so, when the model call fails', () => {
+    const sim = new Simulation(null, { requestAI: (t, _s, key) => sim.provideAI(t.id, key, { status: 'error', error: 'HTTP 401' }) });
+    const t = sim.createTask('lockout', undefined, 'ai');
+    run(sim, () => t.status === 'done');
+    expect(t.outputs.every((o) => o.source === 'fallback')).toBe(true);
+    expect(sim.state.events.filter((e) => e.type === 'ai-error')).toHaveLength(5);
+  });
+});
+
+describe('busy office', () => {
+  it('clears eight mixed requests with agents crossing paths and no deadlock', () => {
+    const sim = new Simulation();
+    for (const id of BUSY_MORNING) sim.createTask(id);
+    for (let i = 0; i < 20000 && sim.state.tasks.some((t) => t.status !== 'done'); i++) {
+      for (const t of sim.state.tasks) if (t.status === 'awaiting-approval') sim.approve(t.id);
+      sim.step(0.1);
+    }
+    expect(sim.state.tasks.every((t) => t.status === 'done')).toBe(true);
+    for (let i = 0; i < 100; i++) sim.step(0.1); // let the last carrier walk home
+    // every agent ended up back at its own desk
+    for (const a of Object.values(sim.state.agents)) expect(a.activity).toBe('idle');
+  });
+
+  it('records a complete stage timeline for every request', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('lockout');
+    run(sim, () => t.status === 'done');
+    expect(t.timeline.map((s) => s.stage)).toEqual(['triage', 'planning', 'execution', 'review', 'delivery', 'done']);
+    for (const s of t.timeline) {
+      expect(s.started! >= s.arrived).toBe(true);
+      expect(s.finished! >= s.started!).toBe(true);
+    }
   });
 });

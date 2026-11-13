@@ -2,71 +2,137 @@
 // - `sim` is the single simulation instance (mutable, ticked every animation frame).
 // - The 3D scene reads `sim.state` directly inside its render loop (60 fps, no React renders).
 // - Panels subscribe to `rev`, which bumps when something discrete changes or 5x a second.
-// - UI-only state (selection, camera follow, open dialogs) lives in the zustand store.
+// - UI-only state (selection, camera, dialogs, tour, AI settings) lives in the zustand store.
+// - Live AI calls are made here, outside the engine, and results are handed back with provideAI.
 
 import { create } from 'zustand';
+import { errorMessage, modelLabel, runStage, testConnection } from '../ai/anthropic';
+import { BUSY_MORNING } from '../sim/data';
 import { Simulation } from '../sim/engine';
-import type { AgentId, ApprovalPolicy, SimState } from '../sim/types';
+import type { AgentId, ApprovalPolicy, SimState, Task, WorkStage } from '../sim/types';
 
-const KEY = 'atrium.sim.v4';
+const KEY = 'atrium.sim.v5';
 const SEEN_KEY = 'atrium.seen-welcome';
+const AI_KEY = 'atrium.ai';
+
+const store = {
+  get(k: string, session = false) {
+    try { return (session ? sessionStorage : localStorage).getItem(k); } catch { return null; }
+  },
+  set(k: string, v: string | null, session = false) {
+    try {
+      const s = session ? sessionStorage : localStorage;
+      if (v === null) s.removeItem(k); else s.setItem(k, v);
+    } catch { /* storage unavailable (private mode, sandboxed preview): keep in memory */ }
+  },
+};
 
 function load(): SimState | null {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as SimState) : null;
-  } catch {
-    return null; // storage unavailable (private mode, sandboxed preview): run in memory
-  }
+  const raw = store.get(KEY);
+  try { return raw ? (JSON.parse(raw) as SimState) : null; } catch { return null; }
 }
-function save() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(sim.state));
-  } catch { /* ignore */ }
+function save() { store.set(KEY, JSON.stringify(sim.state)); }
+
+// ------------------------------------------------------------------ AI settings
+
+export interface AISettings {
+  enabled: boolean;
+  apiKey: string;
+  model: string;
+  remember: boolean;
 }
-function seenWelcome() {
-  try { return localStorage.getItem(SEEN_KEY) === '1'; } catch { return false; }
+const DEFAULT_AI: AISettings = { enabled: false, apiKey: '', model: 'claude-haiku-5-5', remember: false };
+
+function loadAI(): AISettings {
+  const raw = store.get(AI_KEY) ?? store.get(AI_KEY, true);
+  try { return raw ? { ...DEFAULT_AI, ...JSON.parse(raw) } : DEFAULT_AI; } catch { return DEFAULT_AI; }
+}
+function persistAI(a: AISettings) {
+  // The key is kept for this tab only unless the user ticks "remember on this device".
+  store.set(AI_KEY, a.remember ? JSON.stringify(a) : null);
+  store.set(AI_KEY, a.remember ? null : JSON.stringify(a), true);
 }
 
-export const sim = new Simulation(load());
+// --------------------------------------------------------------- live AI calls
+
+const inFlight = new Set<string>();
+function requestAI(task: Task, stage: WorkStage, key: string) {
+  const id = `${task.id}|${key}`;
+  if (inFlight.has(id)) return;
+  const ai = useUI.getState().ai;
+  if (!ai.enabled || !ai.apiKey) {
+    sim.provideAI(task.id, key, { status: 'error', error: 'live AI is turned off' });
+    return;
+  }
+  inFlight.add(id);
+  const slot = task.ai[key];
+  if (slot) slot.model = modelLabel(ai.model);
+  // Snapshot the task so later changes do not alter what this call sees.
+  const snapshot = JSON.parse(JSON.stringify(task)) as Task;
+  runStage({ apiKey: ai.apiKey, model: ai.model }, snapshot, stage)
+    .then((r) => sim.provideAI(task.id, key, r))
+    .catch((e) => {
+      const msg = errorMessage(e);
+      sim.provideAI(task.id, key, { status: 'error', error: msg });
+      useUI.setState({ aiError: msg });
+    })
+    .finally(() => inFlight.delete(id));
+}
+
+export const sim = new Simulation(load(), { requestAI });
 // Handy in the browser console and for automated checks: __atrium.step(5), __atrium.state
 (globalThis as unknown as { __atrium: Simulation }).__atrium = sim;
 
+// -------------------------------------------------------------------- UI state
+
 export type Selection = { kind: 'agent'; id: AgentId } | { kind: 'task'; id: string } | { kind: 'human' } | null;
+export type CameraFocus = Selection | 'overview';
+export type LeftTab = 'tasks' | 'feed' | 'dashboard';
 
 interface UIState {
   rev: number;
   selected: Selection;
   follow: boolean;
-  tab: 'tasks' | 'feed';
-  dialog: 'welcome' | 'about' | null;
+  /** Overrides what the camera tracks (used by the tour). */
+  focus: CameraFocus | null;
+  tab: LeftTab;
+  dialog: 'welcome' | 'about' | 'ai' | null;
   cameraReset: number;
   leftOpen: boolean;
+  tour: { step: number; taskId?: string; prevSpeed: number } | null;
+  ai: AISettings;
+  aiError?: string;
   select: (s: Selection, follow?: boolean) => void;
   setFollow: (f: boolean) => void;
-  setTab: (t: 'tasks' | 'feed') => void;
+  setTab: (t: LeftTab) => void;
   setDialog: (d: UIState['dialog']) => void;
   resetCamera: () => void;
   toggleLeft: () => void;
 }
 
+export const isNarrow = () => typeof innerWidth !== 'undefined' && innerWidth <= 900;
+
 export const useUI = create<UIState>((set) => ({
   rev: 0,
   selected: null,
   follow: false,
+  focus: null,
   tab: 'tasks',
-  dialog: seenWelcome() && sim.state.tasks.length > 0 ? null : 'welcome',
+  dialog: store.get(SEEN_KEY) === '1' && sim.state.tasks.length > 0 ? null : 'welcome',
   cameraReset: 0,
-  leftOpen: typeof innerWidth === 'undefined' || innerWidth > 900,
-  select: (selected, follow) => set((s) => ({ selected, follow: selected ? follow ?? s.follow : false })),
+  leftOpen: !isNarrow(),
+  tour: null,
+  ai: loadAI(),
+  // On a phone the two panels share the bottom of the screen, so opening details closes the list.
+  select: (selected, follow) => set((s) => ({ selected, follow: selected ? follow ?? s.follow : false, ...(selected && isNarrow() ? { leftOpen: false } : {}) })),
   setFollow: (follow) => set({ follow }),
   setTab: (tab) => set({ tab }),
   setDialog: (dialog) => {
-    if (dialog === null) try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* ignore */ }
+    if (dialog === null) store.set(SEEN_KEY, '1');
     set({ dialog });
   },
-  resetCamera: () => set((s) => ({ cameraReset: s.cameraReset + 1, follow: false })),
-  toggleLeft: () => set((s) => ({ leftOpen: !s.leftOpen })),
+  resetCamera: () => set((s) => ({ cameraReset: s.cameraReset + 1, follow: false, focus: null })),
+  toggleLeft: () => set((s) => ({ leftOpen: !s.leftOpen, ...(isNarrow() && !s.leftOpen ? { selected: null } : {}) })),
 }));
 
 const bump = () => useUI.setState((s) => ({ rev: s.rev + 1 }));
@@ -77,7 +143,9 @@ export function useSim(): SimState {
   return sim.state;
 }
 
-// Commands: thin wrappers so panels never touch the engine directly.
+// -------------------------------------------------------------------- commands
+
+const mode = () => (useUI.getState().ai.enabled ? 'ai' : 'script');
 const run = <T,>(fn: () => T): T => {
   const r = fn();
   sim.dirty = false;
@@ -85,8 +153,10 @@ const run = <T,>(fn: () => T): T => {
   save();
   return r;
 };
+
 export const actions = {
-  createTask: (templateId: string, title?: string) => run(() => sim.createTask(templateId, title)),
+  createTask: (templateId: string, title?: string) => run(() => sim.createTask(templateId, title, mode())),
+  busyMorning: () => run(() => BUSY_MORNING.map((id) => sim.createTask(id, undefined, mode()))),
   approve: (id: string, note?: string) => run(() => sim.approve(id, note)),
   reject: (id: string, note?: string) => run(() => sim.reject(id, note)),
   setHeld: (id: string, held: boolean) => run(() => sim.setHeld(id, held)),
@@ -97,18 +167,52 @@ export const actions = {
   setPaused: (p: boolean) => run(() => sim.setPaused(p)),
   reset: () => {
     run(() => sim.reset());
-    useUI.setState({ selected: null, follow: false, dialog: 'welcome' });
+    inFlight.clear();
+    useUI.setState({ selected: null, follow: false, focus: null, tour: null, dialog: 'welcome' });
   },
+
+  // Guided tour
+  startTour: () => {
+    useUI.setState({ tour: { step: 0, prevSpeed: sim.state.speed }, dialog: null, focus: 'overview', selected: null, follow: false, tab: 'tasks', leftOpen: !isNarrow() });
+    store.set(SEEN_KEY, '1');
+    if (sim.state.paused) actions.setPaused(false);
+  },
+  tourTo: (step: number, patch: Partial<NonNullable<UIState['tour']>> = {}) =>
+    useUI.setState((s) => (s.tour ? { tour: { ...s.tour, ...patch, step } } : {})),
+  endTour: () => {
+    const t = useUI.getState().tour;
+    if (t) actions.setSpeed(t.prevSpeed);
+    useUI.setState((s) => ({ tour: null, focus: null, cameraReset: s.cameraReset + 1 }));
+  },
+
+  // Live AI
+  saveAI: (patch: Partial<AISettings>) => {
+    const next = { ...useUI.getState().ai, ...patch };
+    persistAI(next);
+    useUI.setState({ ai: next, aiError: undefined });
+  },
+  testAndEnableAI: async (apiKey: string, model: string, remember: boolean) => {
+    await testConnection({ apiKey, model });
+    actions.saveAI({ enabled: true, apiKey, model, remember });
+  },
+  disableAI: () => actions.saveAI({ enabled: false }),
+  forgetAI: () => actions.saveAI({ ...DEFAULT_AI }),
 };
 
-// Main loop.
+// ------------------------------------------------------------------- main loop
+
 let last = performance.now();
 let lastPublish = 0;
 let lastSave = 0;
-function frame(now: number) {
-  const dt = Math.min(0.1, (now - last) / 1000);
+function advance(now: number, maxDt: number) {
+  let dt = Math.min(maxDt, (now - last) / 1000);
   last = now;
-  sim.step(dt);
+  // Big gaps (background tab) are stepped in small slices so walking and timing stay accurate.
+  while (dt > 1e-6) {
+    const d = Math.min(0.1, dt);
+    sim.step(d);
+    dt -= d;
+  }
   if (sim.dirty || now - lastPublish > 200) {
     sim.dirty = false;
     lastPublish = now;
@@ -118,6 +222,14 @@ function frame(now: number) {
     lastSave = now;
     save();
   }
+}
+function frame(now: number) {
+  if (!document.hidden) advance(now, 0.1);
   requestAnimationFrame(frame);
 }
-if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(frame);
+if (typeof requestAnimationFrame !== 'undefined') {
+  requestAnimationFrame(frame);
+  // Browsers stop animation frames in background tabs; keep the office running at a lower rate.
+  setInterval(() => { if (document.hidden) advance(performance.now(), 5); }, 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) last = performance.now(); });
+}

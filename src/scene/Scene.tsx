@@ -6,6 +6,7 @@ import { AGENT_IDS } from '../sim/data';
 import { station } from '../sim/layout';
 import { sim, useSim, useUI } from '../state/store';
 import { Agent, Packet } from './Actors';
+import { Celebrations, HandoffArcs } from './Effects';
 import { Office } from './Office';
 import { packetTarget } from './helpers';
 import { syncLabels } from './labels';
@@ -34,25 +35,30 @@ function CameraRig() {
   const followKey = useRef('');
   const zoomLeft = useRef(0);
 
+  const userDragged = useRef(false);
   useEffect(() => { homing.current = true; }, [reset]);
   useEffect(() => {
     if (!controls) return;
-    const stop = () => { homing.current = false; zoomLeft.current = 0; };
+    const stop = () => { homing.current = false; zoomLeft.current = 0; userDragged.current = true; };
     controls.addEventListener('start', stop);
     return () => controls.removeEventListener('start', stop);
   }, [controls]);
 
-  // Keep the office centred in the space the side panels leave free.
-  const offset = useRef({ x: 0, w: 0, h: 0 });
+  // Keep the office centred in the space the panels leave free:
+  // side panels on a wide screen, the bottom sheet on a phone.
+  const offset = useRef({ x: 0, y: 0, w: 0, h: 0 });
   useFrame((st, dt) => {
     const ui = useUI.getState();
     const wide = st.size.width > 900;
-    const want = wide ? -((ui.leftOpen ? 348 : 0) - (ui.selected ? 384 : 0)) / 2 : 0;
+    const wantX = wide ? -((ui.leftOpen ? 348 : 0) - (ui.selected ? 384 : 0)) / 2 : 0;
+    const wantY = !wide && (ui.selected || ui.leftOpen) ? st.size.height * 0.24 : !wide && ui.tour ? -st.size.height * 0.12 : 0;
     const o = offset.current;
-    const x = o.x + (want - o.x) * (1 - Math.exp(-5 * dt));
-    if (Math.abs(x - o.x) > 0.2 || o.w !== st.size.width || o.h !== st.size.height) {
-      Object.assign(o, { x, w: st.size.width, h: st.size.height });
-      (camera as PerspectiveCamera).setViewOffset(o.w, o.h, x, 0, o.w, o.h);
+    const k = 1 - Math.exp(-5 * dt);
+    const x = o.x + (wantX - o.x) * k;
+    const y = o.y + (wantY - o.y) * k;
+    if (Math.abs(x - o.x) > 0.2 || Math.abs(y - o.y) > 0.2 || o.w !== st.size.width || o.h !== st.size.height) {
+      Object.assign(o, { x, y, w: st.size.width, h: st.size.height });
+      (camera as PerspectiveCamera).setViewOffset(o.w, o.h, x, y, o.w, o.h);
     }
   });
 
@@ -67,17 +73,19 @@ function CameraRig() {
       controls.update();
       return;
     }
-    const { selected, follow } = useUI.getState();
-    if (!follow || !selected) {
-      followKey.current = '';
-      return;
-    }
-    // When follow starts (or the subject changes), spend a moment zooming in to a close-up.
-    const key = selected.kind === 'human' ? 'human' : selected.id;
+    // What to track: the tour's focus if there is one, otherwise the followed selection.
+    const ui = useUI.getState();
+    const subject = ui.focus ?? (ui.follow ? ui.selected : null);
+    const key = !subject ? '' : subject === 'overview' ? 'overview' : subject.kind === 'human' ? 'human' : subject.id;
     if (followKey.current !== key) {
       followKey.current = key;
-      zoomLeft.current = 1.6;
+      userDragged.current = false;
+      if (key === 'overview') homing.current = true;
+      else if (key) zoomLeft.current = 1.6; // swing in to a close-up
     }
+    // Once the viewer grabs the camera, leave it alone until the subject changes.
+    if (!subject || subject === 'overview' || userDragged.current) return;
+    const selected = subject;
     let ok = true;
     if (selected.kind === 'agent') {
       const a = sim.state.agents[selected.id];
@@ -96,8 +104,9 @@ function CameraRig() {
     if (zoomLeft.current > 0) {
       zoomLeft.current -= dt;
       const dist = camera.position.distanceTo(controls.target);
-      if (dist > 17) {
-        tmp.copy(camera.position).sub(controls.target).setLength(dist + (17 - dist) * (1 - Math.exp(-3 * dt)));
+      const close = st.size.width > 900 ? 17 : 26; // phones need more of the room in view
+      if (dist > close) {
+        tmp.copy(camera.position).sub(controls.target).setLength(dist + (close - dist) * (1 - Math.exp(-3 * dt)));
         camera.position.copy(controls.target).add(tmp);
       }
     }
@@ -113,7 +122,7 @@ function Packets() {
   return <>{state.tasks.map((t) => <Packet key={t.id} id={t.id} />)}</>;
 }
 
-export function Scene() {
+export default function Scene() {
   const select = useUI((s) => s.select);
   return (
     <Canvas
@@ -141,6 +150,8 @@ export function Scene() {
       <Office />
       {AGENT_IDS.map((id) => <Agent key={id} id={id} />)}
       <Packets />
+      <HandoffArcs />
+      <Celebrations />
       <OrbitControls
         makeDefault
         enableDamping
