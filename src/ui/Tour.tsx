@@ -72,7 +72,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Finished, and on the record',
-    body: () => 'Every handoff, every output and your decision are saved in the request\'s history. Next, try a busy morning and watch the dashboard find the bottleneck, or connect a real model.',
+    body: () => 'Finished requests turn gold and build the team\'s pyramid in the middle of the room. Every handoff, output and your decision are saved in the history. Next, try a busy morning to watch towers grow on the desks, or connect a real model.',
     focus: (t) => (t ? { kind: 'task', id: t.id } : 'overview'),
     details: true,
     highlight: '.trail',

@@ -352,7 +352,7 @@ export class Simulation {
     const home = station(AGENT_STATION[a.id]);
     const dest = this.destination(next);
     // Each agent has its own spot at a desk so two carriers never stand on the same point.
-    const slot = (AGENT_IDS.indexOf(a.id) - 2) * 0.42;
+    const slot = next.stage === 'done' ? 0 : (AGENT_IDS.indexOf(a.id) - 2) * 0.42;
     const drop: Vec2 = [dest.visitor[0] + dest.tangent[0] * slot, dest.visitor[1] + dest.tangent[1] * slot];
     a.activity = 'carrying';
     a.path = [home.exit, home.gate, drop];

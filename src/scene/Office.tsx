@@ -9,7 +9,7 @@ import { AGENT_STATION, STATIONS, station, type Station } from '../sim/layout';
 import type { AgentId, Stage } from '../sim/types';
 import { sim, useUI } from '../state/store';
 import { DESK_TOP, useCanvasTexture } from './helpers';
-import { ArchiveCrates, PileMats } from './Archive';
+import { CentreAndAnchors } from './Archive';
 import { anchorRef } from './labels';
 
 const INK = '#14233B';
@@ -17,7 +17,7 @@ const FLOOR = '#EEF2F6';
 const WOOD = '#F7F9FB';
 
 /** Flat label painted on the floor in front of a station: step number + name. */
-function FloorLabel({ st, n, title, sub, color }: { st: Station; n: number | null; title: string; sub: string; color: string }) {
+function FloorLabel({ st, n, title, sub, color, dist }: { st: Station; n: number | null; title: string; sub: string; color: string; dist?: number }) {
   const tex = useCanvasTexture(
     (ctx, w, h) => {
       ctx.clearRect(0, 0, w, h);
@@ -47,7 +47,7 @@ function FloorLabel({ st, n, title, sub, color }: { st: Station; n: number | nul
   );
   if (!tex) return null;
   // Always reads left-to-right from the default camera; pushed further out beside side-on desks.
-  const d = 1.2 + 1.4 * Math.abs(st.inward[0]);
+  const d = dist ?? 1.2 + 1.4 * Math.abs(st.inward[0]);
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[st.center[0] + st.inward[0] * d + 0.15, 0.012, st.center[1] + st.inward[1] * d]}>
       <planeGeometry args={[3.4, 0.85]} />
@@ -205,36 +205,6 @@ function ApprovalConsole() {
   );
 }
 
-function Archive() {
-  const st = station('archive');
-  return (
-    <>
-    <StationGroup st={st}>
-      {[0.2, 0.76, 1.32, 1.88].map((y) => (
-        <mesh key={y} position={[0, y, 0]} castShadow receiveShadow>
-          <boxGeometry args={[2.1, 0.06, 0.5]} />
-          <meshStandardMaterial color={WOOD} />
-        </mesh>
-      ))}
-      {[-1.05, 1.05].map((x) => (
-        <mesh key={x} position={[x, 1.02, 0]} castShadow>
-          <boxGeometry args={[0.06, 1.9, 0.5]} />
-          <meshStandardMaterial color="#C9D3DE" />
-        </mesh>
-      ))}
-      {/* open-backed, so the completed boxes are visible from any side */}
-      {[-1.05, 1.05].map((x) => (
-        <mesh key={`b${x}`} position={[x, 1.02, -0.22]} castShadow>
-          <boxGeometry args={[0.06, 1.9, 0.06]} />
-          <meshStandardMaterial color="#C9D3DE" />
-        </mesh>
-      ))}
-      <group ref={anchorRef('archive')} position={[0, 2.25, 0]} />
-    </StationGroup>
-    <FloorLabel st={st} n={null} title="Completed" sub="Closed and on record" color={INK} />
-    </>
-  );
-}
 
 /** A line on the floor through every station, with dots drifting in the direction work flows. */
 function FlowLine() {
@@ -329,24 +299,14 @@ export function Office() {
       <RoundedBox args={[25, 0.5, 22]} radius={0.2} position={[0, -0.25, -3.2]} receiveShadow>
         <meshStandardMaterial color={FLOOR} roughness={0.95} />
       </RoundedBox>
-      {/* centre rug */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006, -0.4]} receiveShadow>
-        <circleGeometry args={[3.3, 64]} />
-        <meshStandardMaterial color="#DCE4EC" roughness={1} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -0.4]}>
-        <ringGeometry args={[2.9, 3.0, 64]} />
-        <meshBasicMaterial color="#C3CEDB" />
-      </mesh>
       <FlowLine />
       <Inbox />
       {(Object.keys(AGENTS) as AgentId[]).map((id) => (
         <Desk key={id} id={id} n={stageNumber[AGENTS[id].stage]!} />
       ))}
       <ApprovalConsole />
-      <Archive />
-      <ArchiveCrates />
-      <PileMats />
+      <CentreAndAnchors />
+      <FloorLabel st={station('archive')} n={null} title="Completed" sub="Every finished request" color={INK} dist={3.35} />
       <BackWall />
       <Plant x={-10.8} z={-11} s={1.3} />
       <Plant x={10.8} z={-11} s={1.3} />

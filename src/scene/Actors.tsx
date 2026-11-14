@@ -10,7 +10,9 @@ import { station } from '../sim/layout';
 import type { AgentId } from '../sim/types';
 import { sim, useSim, useUI } from '../state/store';
 import { lerpAngle } from './helpers';
-import { boxLayout, jitter } from './boxLayout';
+import { BOX_H, boxLayout, towerLean } from './boxLayout';
+
+const reduceMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 import { anchorRef } from './labels';
 
 const hover = (on: boolean) => (document.body.style.cursor = on ? 'pointer' : '');
@@ -24,6 +26,8 @@ export function Agent({ id }: { id: AgentId }) {
   const tip = useRef<Mesh>(null!);
   const ring = useRef<Mesh>(null!);
   const hands = useRef<Group>(null!);
+  const sweat = useRef<Mesh>(null!);
+
   const phase = useMemo(() => id.charCodeAt(0) * 1.7, [id]);
 
   const selected = useUI((s) => s.selected?.kind === 'agent' && s.selected.id === id);
@@ -38,9 +42,29 @@ export function Agent({ id }: { id: AgentId }) {
     const moving = ag.activity === 'carrying' || ag.activity === 'returning';
     bob.current.position.y = 0.1 + Math.sin(t * (moving ? 9 : 2)) * (moving ? 0.03 : 0.025);
     bob.current.rotation.x = moving ? 0.1 : 0;
-    head.current.rotation.x += ((working ? 0.32 : 0) - head.current.rotation.x) * 0.1;
-    // Working: small glances at the screen. Idle: slowly looking around the room.
-    head.current.rotation.y = working ? Math.sin(t * 1.3) * 0.18 : ag.activity === 'idle' ? Math.sin(t * 0.35) * 0.5 : 0;
+    // A tall tower of waiting work makes the agent nervous: every few seconds it glances up at the pile.
+    const tower = boxLayout(sim).towers[id];
+    const atDesk = ag.activity === 'working' || ag.activity === 'idle';
+    const nervous = atDesk && tower.count >= 6 && !reduceMotion;
+    const glancing = nervous && (t % 4.2) < 1.3;
+    let lookX = working ? 0.32 : 0;
+    let lookY = working ? Math.sin(t * 1.3) * 0.18 : ag.activity === 'idle' ? Math.sin(t * 0.35) * 0.5 : 0;
+    if (glancing) {
+      // which side of the agent the tower is on, in the agent's own frame
+      const right = Math.cos(ag.heading) * (tower.x - ag.pos[0]) - Math.sin(ag.heading) * (tower.z - ag.pos[1]);
+      lookX = -0.5;
+      lookY = right > 0 ? 0.75 : -0.75;
+    }
+    head.current.rotation.x += (lookX - head.current.rotation.x) * 0.12;
+    head.current.rotation.y += (lookY - head.current.rotation.y) * (glancing ? 0.15 : 0.3);
+    // ...and sweats a little once it is really tall.
+    const sweating = nervous && tower.count >= 9;
+    sweat.current.visible = sweating;
+    if (sweating) {
+      const d = (t * 0.9) % 1;
+      sweat.current.position.set(0.33, 1.38 - d * 0.35, 0.12);
+      sweat.current.scale.setScalar(1 - d * 0.6);
+    }
     eyes.current.scale.y = Math.sin(t * 0.9) > 0.985 ? 0.1 : 1; // blink
     (tip.current.material as unknown as { emissiveIntensity: number }).emissiveIntensity = working ? 1.2 + Math.sin(t * 8) * 0.8 : 0.3;
     const carrying = ag.activity === 'carrying';
@@ -105,6 +129,10 @@ export function Agent({ id }: { id: AgentId }) {
           </mesh>
         </group>
       </group>
+      <mesh ref={sweat} visible={false}>
+        <sphereGeometry args={[0.045, 10, 10]} />
+        <meshStandardMaterial color="#7CC4FF" emissive="#7CC4FF" emissiveIntensity={0.4} transparent opacity={0.9} />
+      </mesh>
       <group ref={anchorRef(`agent:${id}`)} position={[0, 1.95, 0]} />
     </group>
   );
@@ -116,6 +144,7 @@ export function Packet({ id }: { id: string }) {
   const halo = useRef<Mesh>(null!);
   const tgt = useMemo(() => new Vector3(), []);
   const started = useRef(false);
+  const hiddenSince = useRef<number | null>(null);
 
   const state = useSim();
   const t = state.tasks.find((x) => x.id === id);
@@ -123,7 +152,9 @@ export function Packet({ id }: { id: string }) {
   const select = useUI((s) => s.select);
   // Requests are neutral paper boxes so they never borrow an agent's colour; red means it needs you.
   const alert = t?.status === 'awaiting-approval';
-  const color = alert ? '#D93A3F' : '#FFFFFF';
+  const done = t?.status === 'done';
+  // Completed boxes turn gold as they join the trophy pyramid.
+  const color = alert ? '#D93A3F' : done ? '#F2BE3C' : '#FFFFFF';
 
   useFrame(({ clock }, dt) => {
     const task = sim.task(id);
@@ -143,18 +174,28 @@ export function Packet({ id }: { id: string }) {
       } else pos.copy(tgt);
     }
     const dist = pos.distanceTo(tgt);
-    pos.lerp(tgt, 1 - Math.exp(-(spot.carried ? 20 : spot.packed ? 3 : 4) * dt));
-    // Boxes that travel on their own (arriving, approved, packed) hop in an arc.
+    pos.lerp(tgt, 1 - Math.exp(-(spot.carried ? 20 : 5) * dt));
+    // Boxes that travel on their own (arriving, approved, completed) hop in an arc.
     box.current.position.y = spot.carried ? 0 : Math.min(dist, 4) * 0.3;
-    // Packed boxes shrink into their crate and disappear.
-    const scale = spot.packed ? Math.min(1, dist / 1.2) : 1;
+    // Desk towers sway as one: each box shifts with its height, like a wobbling stack.
+    if (spot.tower) {
+      const tw = boxLayout(sim).towers[spot.tower.agent];
+      const lean = reduceMotion ? 0 : towerLean(spot.tower.agent, tw.count, clock.elapsedTime);
+      const h = (spot.tower.level + 0.5) * BOX_H;
+      box.current.position.x = tw.sway[0] * Math.sin(lean) * h;
+      box.current.position.z = tw.sway[1] * Math.sin(lean) * h;
+    } else {
+      box.current.position.x = 0;
+      box.current.position.z = 0;
+    }
+    // Boxes beyond the visible part of a tower shrink out of sight.
+    const scale = spot.hidden ? Math.max(0, 1 - (clock.elapsedTime - (hiddenSince.current ??= clock.elapsedTime)) * 4) : 1;
+    if (!spot.hidden) hiddenSince.current = null;
     box.current.scale.setScalar(Math.max(0.001, scale));
     root.current.visible = scale > 0.03;
     const waiting = task.status === 'awaiting-approval';
     if (spot.spinning) box.current.rotation.y += dt * 1.8;
     else box.current.rotation.y = lerpAngle(box.current.rotation.y, spot.rotY, 1 - Math.exp(-8 * dt));
-    // A small wobble while a box sits in a pile, so the stacks feel alive.
-    box.current.rotation.z = !spot.carried && !spot.spinning && !spot.packed && task.status === 'queued' ? Math.sin(clock.elapsedTime * 1.3 + jitter(id) * 6) * 0.02 : 0;
     halo.current.visible = waiting || selected;
     if (halo.current.visible) {
       const s = 1 + (waiting ? Math.sin(clock.elapsedTime * 5) * 0.18 : 0);
@@ -172,11 +213,11 @@ export function Packet({ id }: { id: string }) {
           onPointerOut={() => hover(false)}
         >
           <RoundedBox args={[0.4, 0.28, 0.34]} radius={0.04} castShadow>
-            <meshStandardMaterial color={color} roughness={0.5} emissive={color} emissiveIntensity={alert ? 0.35 : 0.05} transparent={t.held} opacity={t.held ? 0.4 : 1} />
+            <meshStandardMaterial color={color} roughness={0.5} emissive={color} emissiveIntensity={alert ? 0.35 : done ? 0.18 : 0.05} transparent={t.held} opacity={t.held ? 0.4 : 1} />
           </RoundedBox>
           <mesh position={[0, 0.02, 0]}>
             <boxGeometry args={[0.405, 0.07, 0.345]} />
-            <meshStandardMaterial color={alert ? '#FFFFFF' : '#14233B'} roughness={0.5} transparent={t.held} opacity={t.held ? 0.4 : 1} />
+            <meshStandardMaterial color={alert ? '#FFFFFF' : done ? '#FFF4D6' : '#14233B'} roughness={0.5} transparent={t.held} opacity={t.held ? 0.4 : 1} />
           </mesh>
         </group>
         <mesh ref={halo} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.12, 0]} visible={false}>

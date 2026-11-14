@@ -65,26 +65,33 @@ function build(): Station[] {
   });
 }
 
+/** The middle of the room, where completed work builds a pyramid. */
+export const ROOM_CENTRE: Vec2 = [0, -0.4];
+/** Where Echo stands to add a box to the pyramid: this far from the centre, on Echo's side. */
+const PYRAMID_REACH = 3.0;
+
 /**
- * The mail slot and the completed shelf have nobody standing behind them, so they
- * face the default camera instead of the middle of the room. That way you can see
- * requests arrive and completed boxes on the shelf without turning the view.
+ * The mail slot has nobody standing behind it, so it faces the default camera
+ * instead of the middle of the room. That way you can see requests arrive.
  */
 const VIEWER: Vec2 = [0, 19];
 function faceViewer(st: Station): Station {
   const inward = norm([VIEWER[0] - st.center[0], VIEWER[1] - st.center[1]]);
   const tangent: Vec2 = [inward[1], -inward[0]]; // viewer's right-hand side
-  return {
-    ...st,
-    inward,
-    tangent,
-    // drop-off point in front of the left end, so the carrier never walks through the shelf
-    visitor: add(add(st.center, inward, 1.6), tangent, -1.3),
-    rotY: Math.atan2(inward[0], inward[1]),
-  };
+  return { ...st, inward, tangent, visitor: add(st.center, inward, 1.6), rotY: Math.atan2(inward[0], inward[1]) };
 }
 
-export const STATIONS: Station[] = build().map((st) => (st.key === 'archive' || st.key === 'inbox' ? faceViewer(st) : st));
+/** "Completed" is the pyramid in the middle of the room, facing the viewer. */
+function centreStation(st: Station, deliveredBy: Station): Station {
+  const toEcho = norm([deliveredBy.center[0] - ROOM_CENTRE[0], deliveredBy.center[1] - ROOM_CENTRE[1]]);
+  const visitor = add(ROOM_CENTRE, toEcho, PYRAMID_REACH);
+  return { ...st, center: ROOM_CENTRE, inward: [0, 1], tangent: [1, 0], home: ROOM_CENTRE, exit: visitor, gate: visitor, visitor, rotY: 0 };
+}
+
+const built = build();
+export const STATIONS: Station[] = built.map((st) =>
+  st.key === 'inbox' ? faceViewer(st) : st.key === 'archive' ? centreStation(st, built[STATION_KEYS.indexOf('delivery')]) : st,
+);
 export const station = (key: StationKey): Station => STATIONS[STATION_KEYS.indexOf(key)];
 
 export const AGENT_STATION: Record<AgentId, StationKey> = {

@@ -2,8 +2,7 @@
 
 import { AGENTS, AGENT_IDS, HUMAN, STAGE_META } from '../sim/data';
 import { labelRef } from '../state/labelRegistry';
-import { sim, useSim, useUI } from '../state/store';
-import type { AgentId } from '../sim/types';
+import { useSim, useUI } from '../state/store';
 import { slaInfo } from '../sim/sla';
 
 const ACTIVITY = { idle: 'idle', working: 'working', carrying: 'handing off', returning: 'walking back' } as const;
@@ -22,7 +21,6 @@ export function SceneLabels() {
         const p = AGENTS[id];
         const a = s.agents[id];
         const task = s.tasks.find((t) => t.id === a.taskId);
-        const queue = s.tasks.filter((t) => t.ownerId === id && t.status === 'queued' && !t.held).length;
         const on = selected?.kind === 'agent' && selected.id === id;
         const holdsSelected = selected?.kind === 'task' && a.taskId === selected.id;
         return (
@@ -41,16 +39,23 @@ export function SceneLabels() {
               )}
               <span className="tag-name"><i className="dot" />{p.name}</span>
               <span className="tag-role">{p.role}</span>
-              {queue > 0 && <span className="tag-queue">{queue} waiting</span>}
             </button>
           </div>
         );
       })}
       {done > 0 && (
         <div className="lbl" ref={labelRef('archive')}>
-          <span className="tag tag-archive"><span className="tag-name">{done} completed</span>{done > 12 && <span className="tag-role">{Math.floor((done - 1) / 12)} {Math.floor((done - 1) / 12) === 1 ? 'crate' : 'crates'} packed</span>}</span>
+          <span className="tag tag-archive"><span className="tag-name">{done} completed</span></span>
         </div>
       )}
+      {AGENT_IDS.map((id) => {
+        const waiting = s.tasks.filter((t) => t.ownerId === id && t.status === 'queued' && !t.held).length;
+        return waiting > 0 ? (
+          <div key={`more-${id}`} className="lbl" ref={labelRef(`tower:${id}`)}>
+            <span className="tag tag-more" title={waiting > 10 ? 'Ten are shown on the desk' : undefined}><span className="tag-name">{waiting} waiting</span></span>
+          </div>
+        ) : null;
+      })}
       <div className="lbl" ref={labelRef('human')}>
         <button className={`tag tag-human${selected?.kind === 'human' ? ' is-selected' : ''}`} onClick={() => select({ kind: 'human' })}>
           {waiting > 0 && <span className="tag-alert">{waiting} waiting for you</span>}
@@ -61,8 +66,8 @@ export function SceneLabels() {
       {s.tasks.map((t) => {
         const on = selected?.kind === 'task' && selected.id === t.id;
         if (t.status === 'cancelled' || (t.status === 'done' && !on)) return null;
-        // In a stacked tray only the top request is labelled; the agent's tag shows how many wait.
-        if (!on && t.status === 'queued' && t.ownerId !== 'human' && sim.queueFor(t.ownerId as AgentId).indexOf(t) > 0) return null;
+        // Requests waiting in a desk tower are counted by the tower's tag instead of labelled one by one.
+        if (!on && t.status === 'queued' && t.ownerId !== 'human') return null;
         return (
           <div key={t.id} className="lbl" ref={labelRef(`task:${t.id}`)}>
             <button

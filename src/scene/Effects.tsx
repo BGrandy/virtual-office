@@ -6,9 +6,9 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BufferAttribute, BufferGeometry, Color, DoubleSide, Line, LineDashedMaterial, Object3D, QuadraticBezierCurve3, Vector3, type InstancedMesh, type Mesh } from 'three';
 import { AGENTS, AGENT_IDS } from '../sim/data';
-import { station } from '../sim/layout';
 import type { AgentId } from '../sim/types';
 import { sim } from '../state/store';
+import { boxLayout } from './boxLayout';
 
 const SEGMENTS = 40;
 const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -85,8 +85,8 @@ export function Celebrations() {
     const fresh = done.filter((id) => !seen.current!.has(id));
     fresh.forEach((id) => seen.current!.add(id));
     if (fresh.length && !reducedMotion()) {
-      const st = station('archive');
-      const origin = new Vector3(st.center[0] + st.inward[0] * 0.9, 1.6, st.center[1] + st.inward[1] * 0.9);
+      const top = boxLayout(sim).pyramid.top;
+      const origin = new Vector3(top[0], top[1] + 0.4, top[2]);
       const v: Vector3[] = [];
       const spin: number[] = [];
       for (let i = 0; i < N; i++) {

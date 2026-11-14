@@ -8,7 +8,7 @@ A browser-based 3D office where five AI agents work an IT support queue as a tea
 | **Repository** | https://github.com/BGrandy/virtual-office |
 | **Status** | Working demo. Agents are scripted by default, with an optional live mode where a real Claude model does each step using your own API key. No real IT system is touched in either mode. See [What is real](#what-is-real-simulated-and-proposed). |
 
-![The office during a busy morning, with the dashboard open](docs/office.png)
+![The office with towers of waiting work on the desks and the gold pyramid of finished work in the middle](docs/office.png)
 
 **Highlights**
 
@@ -91,7 +91,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Look around | Drag to orbit, scroll to zoom, right-drag (or two-finger drag) to move. "Reset view" returns to the overview. |
 | Learn it in two minutes | Welcome screen, "Take the tour". Reopen it any time from "Guide". |
 | Start a request | Left panel, "Start a request". Pick one of four scenarios or type your own. |
-| Load the office | "Simulate a busy morning" sends eight mixed requests at once. Waiting work piles up behind each agent; after twelve completed requests, the shelf gets packed into crates. |
+| Load the office | "Simulate a busy morning" sends eight mixed requests at once. Waiting work stacks into towers on the desks, and finished work builds the gold pyramid in the middle of the room. |
 | See who an agent is | Click the agent or its name tag. The right panel shows its role, current work, tray, permitted systems and recent activity. |
 | Follow a request | Click its box in the office or its row in the left panel. The right panel shows the pipeline, current owner, everything produced so far and the handoff trail. "Follow in office" makes the camera track the box. |
 | Approve or reject | When a request stops for you, a red bar appears at the bottom and the box pulses on your console. Open it, read the review, then "Approve" or "Request changes". |
@@ -127,7 +127,7 @@ Choose **Take the tour** on the welcome screen. It sends the new-hire request an
 3. **Execute.** Bolt creates the account, adds groups, enrols the laptop and stages the licence without applying it. Walks it to Sage.
 4. **Review.** Sage checks each step against the change log, confirms MFA and disk encryption, and decides a person must sign off the licence. Walks it to the supervisor console.
 5. **Approve.** Everything stops. The box turns red on your console, the top bar shows "Need you: 1", and the approval card is highlighted. You approve, or request changes with a note.
-6. **Complete.** The box moves to Echo, who writes the reply to HR, closes the ticket and files the box on the archive shelf.
+6. **Complete.** The box moves to Echo, who writes the reply to HR, closes the ticket and carries the box to the middle of the room, where it turns gold and joins the pyramid.
 
 At each step the right panel adds the agent's output and a line in "Who had it, and when". While an agent carries a request, a dashed arc shows where it is going: the carrier's colour for a normal handoff, gold when it is going to you, red when it is being sent back.
 
@@ -262,9 +262,9 @@ flowchart LR
 | `src/ai/prompts.ts` | Builds one agent's request for one step: role, limits, the work so far, and a typed tool schema. |
 | `src/ai/anthropic.ts` | Calls the Messages API from the browser, validates the answer, and turns failures into a clear error so the engine can fall back. |
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
-| `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `boxLayout.ts` decides where every request box sits (piles, console, shelf, crates); `Quality.tsx` picks the graphics level. |
+| `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 45 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
+| `*.test.ts` | 47 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
 
@@ -345,13 +345,13 @@ flowchart TB
 
 - **Ownership is physical.** A task has one location and so one owner. This removes the most common confusion in multi-agent views.
 - **The human is drawn as a person, on a raised platform, in a different colour.** The approval step should look different from the automated steps because it is different.
-- **Work you can count at a glance.** Waiting requests pile up on the floor behind the agent who owns them, six to a pile and four piles to a row, so a growing backlog literally gets taller. Past four rows the piles keep growing upward instead of into the wall. When the completed shelf is full, its twelve boxes are packed into a labelled archive crate that drops onto a pallet beside it, and a counter above the shelf keeps the running total. The placement rules are unit-tested so nothing overlaps or leaves the floor, however many requests there are.
+- **Work you can count at a glance.** Waiting requests stack into a tower on the owner's desk. The next one is at the bottom, so when it is taken the tower drops a level, Jenga-style. The taller the tower, the more it sways, and once it is tall the agent starts glancing up at it nervously (and eventually sweating). Ten boxes are shown; a tag on top gives the full count. Finished requests are carried to the middle of the room and turn gold as they build a pyramid: filled from the bottom up so no box floats, and rebuilt one size larger when it outgrows its base. It grows wider faster than taller, so even 500 requests stay on screen. The placement rules are unit-tested.
 - **The room is a horseshoe in workflow order.** Work moves left to right around it, so position tells you progress. Floor numbers match the pipeline in the side panel.
 - **Three ways to read the same state.** The room for a glance, the request list for the queue, the inspector for detail. All three are driven by the same engine state, so they cannot disagree.
 - **Blocked on a human is the loudest thing on screen.** Red is used only for that and for rework.
 - **Disclosure is built in.** A permanent badge in the top bar and a note on each agent, not just a line in this file.
 - **Scenarios were chosen to cover the paths.** Straight through, approval gate, rework loop and priority, so a reviewer can see each behaviour in about a minute.
-- **Colours were checked, not picked by eye.** Each agent has one colour, used on its robot, desk, floor marker and name tag. The five were chosen and ordered with a colour-blindness validator so that neighbouring desks stay distinguishable for common colour vision deficiencies. Agents are always named as well, so colour is never the only cue. Request boxes are neutral so they never borrow an agent's colour. Gold means you, red means it needs you.
+- **Colours were checked, not picked by eye.** Each agent has one colour, used on its robot, desk, floor marker and name tag. The five were chosen and ordered with a colour-blindness validator so that neighbouring desks stay distinguishable for common colour vision deficiencies. Agents are always named as well, so colour is never the only cue. Request boxes are neutral so they never borrow an agent's colour. Red means it needs you; gold marks you and the finished pile.
 - **The model proposes, the engine decides.** Live AI changes who writes the work, not who controls the workflow. That boundary is the main thing I would keep in production.
 - **The tour follows the simulation.** Each step waits for a real event instead of a timer, so it cannot drift out of sync, and it still works if you send the request back instead of approving it.
 - **Earliest deadline first, not strict priority.** Strict priority can leave low-priority work waiting forever on a busy day. Ordering by deadline still puts urgent work first, because its deadline is shortest.
@@ -366,7 +366,7 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 45 unit tests
+npm test           # 47 unit tests
 npm run build      # type-check and build to dist/
 npm run preview    # serve the production build locally
 ```
@@ -385,7 +385,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 45 tests):
+- **Unit tests** (`npm test`, 47 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
@@ -393,7 +393,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
   - *Dashboard:* autonomy share, the waiting/working split, and that the recommendation names a pile-up and slow approvals.
   - *Response targets:* on track to at risk to breached, a single breach event, met and missed on completion, earliest-deadline-first ordering, and the recommendation putting an at-risk request first.
   - *Value and export:* the value arithmetic, no negative savings, the full audit trail, and CSV quoting including formula-like text.
-  - *Box layout:* piles never taller than six until the floor is full, 260 waiting requests each in their own spot on the floor, the next request on top of the first pile, the shelf ordered by completion time, and 163 completed requests packed into 13 crates that stay on the floor.
+  - *Box layout:* towers show ten boxes and count the rest, the next request is at the bottom, taller towers sway more, the pyramid never leaves a box floating (checked for several sizes), 500 completed requests stay under 3.2 m tall and on the plinth, and the pyramid is ordered by completion time.
 - **Type checking** runs with TypeScript strict mode as part of every build.
 - **Browser checks** in headless Chrome at 1440×900, 1280×720 and a 390×844 phone: the full tour including the approval step, a busy morning through to the dashboard, chart tooltip and table view, and live AI mode against a mocked Claude API (checking the request headers, model ID, all five stage calls, output labels, and that the key stays in tab-only storage). Also: light graphics switching on by itself on a software renderer, the at-risk recommendation during a busy morning, the value figures updating when an assumption changes, and all three downloads opened and checked. Screenshots were inspected and the console checked for errors.
 - **CI** repeats the tests and build on every push before deploying.
