@@ -9,7 +9,8 @@ import { AGENTS } from '../sim/data';
 import { station } from '../sim/layout';
 import type { AgentId } from '../sim/types';
 import { sim, useSim, useUI } from '../state/store';
-import { lerpAngle, packetTarget } from './helpers';
+import { lerpAngle } from './helpers';
+import { boxLayout, jitter } from './boxLayout';
 import { anchorRef } from './labels';
 
 const hover = (on: boolean) => (document.body.style.cursor = on ? 'pointer' : '');
@@ -126,11 +127,12 @@ export function Packet({ id }: { id: string }) {
 
   useFrame(({ clock }, dt) => {
     const task = sim.task(id);
-    if (!task || !packetTarget(task, tgt)) {
+    const spot = task ? boxLayout(sim).spots.get(id) : undefined;
+    if (!task || !spot) {
       root.current.visible = false;
       return;
     }
-    root.current.visible = true;
+    tgt.set(spot.x, spot.y, spot.z);
     const pos = root.current.position;
     if (!started.current) {
       started.current = true;
@@ -140,15 +142,19 @@ export function Packet({ id }: { id: string }) {
         pos.set(inbox.center[0], 1.15, inbox.center[1]);
       } else pos.copy(tgt);
     }
-    const carried = task.status === 'handoff';
     const dist = pos.distanceTo(tgt);
-    pos.lerp(tgt, 1 - Math.exp(-(carried ? 20 : 4) * dt));
-    // Boxes that travel on their own (arriving, approved) hop in an arc.
-    box.current.position.y = carried ? 0 : Math.min(dist, 4) * 0.3;
+    pos.lerp(tgt, 1 - Math.exp(-(spot.carried ? 20 : spot.packed ? 3 : 4) * dt));
+    // Boxes that travel on their own (arriving, approved, packed) hop in an arc.
+    box.current.position.y = spot.carried ? 0 : Math.min(dist, 4) * 0.3;
+    // Packed boxes shrink into their crate and disappear.
+    const scale = spot.packed ? Math.min(1, dist / 1.2) : 1;
+    box.current.scale.setScalar(Math.max(0.001, scale));
+    root.current.visible = scale > 0.03;
     const waiting = task.status === 'awaiting-approval';
-    if (task.status === 'active') box.current.rotation.y += dt * 1.8;
-    else if (waiting) box.current.rotation.y += dt * 0.6;
-    else box.current.rotation.y *= 0.9;
+    if (spot.spinning) box.current.rotation.y += dt * 1.8;
+    else box.current.rotation.y = lerpAngle(box.current.rotation.y, spot.rotY, 1 - Math.exp(-8 * dt));
+    // A small wobble while a box sits in a pile, so the stacks feel alive.
+    box.current.rotation.z = !spot.carried && !spot.spinning && !spot.packed && task.status === 'queued' ? Math.sin(clock.elapsedTime * 1.3 + jitter(id) * 6) * 0.02 : 0;
     halo.current.visible = waiting || selected;
     if (halo.current.visible) {
       const s = 1 + (waiting ? Math.sin(clock.elapsedTime * 5) * 0.18 : 0);

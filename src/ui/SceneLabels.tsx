@@ -13,6 +13,7 @@ export function SceneLabels() {
   const selected = useUI((st) => st.selected);
   const select = useUI((st) => st.select);
   const waiting = s.tasks.filter((t) => t.status === 'awaiting-approval').length;
+  const done = s.tasks.filter((t) => t.status === 'done').length;
   // Busy offices get crowded: speech bubbles only for the selected agent, or anyone when 2 or fewer are talking.
   const talking = AGENT_IDS.filter((id) => s.agents[id].say).length;
   return (
@@ -45,6 +46,11 @@ export function SceneLabels() {
           </div>
         );
       })}
+      {done > 0 && (
+        <div className="lbl" ref={labelRef('archive')}>
+          <span className="tag tag-archive"><span className="tag-name">{done} completed</span>{done > 12 && <span className="tag-role">{Math.floor((done - 1) / 12)} {Math.floor((done - 1) / 12) === 1 ? 'crate' : 'crates'} packed</span>}</span>
+        </div>
+      )}
       <div className="lbl" ref={labelRef('human')}>
         <button className={`tag tag-human${selected?.kind === 'human' ? ' is-selected' : ''}`} onClick={() => select({ kind: 'human' })}>
           {waiting > 0 && <span className="tag-alert">{waiting} waiting for you</span>}

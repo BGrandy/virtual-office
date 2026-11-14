@@ -91,7 +91,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Look around | Drag to orbit, scroll to zoom, right-drag (or two-finger drag) to move. "Reset view" returns to the overview. |
 | Learn it in two minutes | Welcome screen, "Take the tour". Reopen it any time from "Guide". |
 | Start a request | Left panel, "Start a request". Pick one of four scenarios or type your own. |
-| Load the office | "Simulate a busy morning" sends eight mixed requests at once. |
+| Load the office | "Simulate a busy morning" sends eight mixed requests at once. Waiting work piles up behind each agent; after twelve completed requests, the shelf gets packed into crates. |
 | See who an agent is | Click the agent or its name tag. The right panel shows its role, current work, tray, permitted systems and recent activity. |
 | Follow a request | Click its box in the office or its row in the left panel. The right panel shows the pipeline, current owner, everything produced so far and the handoff trail. "Follow in office" makes the camera track the box. |
 | Approve or reject | When a request stops for you, a red bar appears at the bottom and the box pulses on your console. Open it, read the review, then "Approve" or "Request changes". |
@@ -262,9 +262,9 @@ flowchart LR
 | `src/ai/prompts.ts` | Builds one agent's request for one step: role, limits, the work so far, and a typed tool schema. |
 | `src/ai/anthropic.ts` | Calls the Messages API from the browser, validates the answer, and turns failures into a clear error so the engine can fall back. |
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
-| `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `Quality.tsx` picks the graphics level. |
+| `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `boxLayout.ts` decides where every request box sits (piles, console, shelf, crates); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 40 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate and the exports. |
+| `*.test.ts` | 45 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
 
@@ -345,6 +345,7 @@ flowchart TB
 
 - **Ownership is physical.** A task has one location and so one owner. This removes the most common confusion in multi-agent views.
 - **The human is drawn as a person, on a raised platform, in a different colour.** The approval step should look different from the automated steps because it is different.
+- **Work you can count at a glance.** Waiting requests pile up on the floor behind the agent who owns them, six to a pile and four piles to a row, so a growing backlog literally gets taller. Past four rows the piles keep growing upward instead of into the wall. When the completed shelf is full, its twelve boxes are packed into a labelled archive crate that drops onto a pallet beside it, and a counter above the shelf keeps the running total. The placement rules are unit-tested so nothing overlaps or leaves the floor, however many requests there are.
 - **The room is a horseshoe in workflow order.** Work moves left to right around it, so position tells you progress. Floor numbers match the pipeline in the side panel.
 - **Three ways to read the same state.** The room for a glance, the request list for the queue, the inspector for detail. All three are driven by the same engine state, so they cannot disagree.
 - **Blocked on a human is the loudest thing on screen.** Red is used only for that and for rework.
@@ -365,7 +366,7 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 40 unit tests
+npm test           # 45 unit tests
 npm run build      # type-check and build to dist/
 npm run preview    # serve the production build locally
 ```
@@ -384,7 +385,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 40 tests):
+- **Unit tests** (`npm test`, 45 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
@@ -392,6 +393,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
   - *Dashboard:* autonomy share, the waiting/working split, and that the recommendation names a pile-up and slow approvals.
   - *Response targets:* on track to at risk to breached, a single breach event, met and missed on completion, earliest-deadline-first ordering, and the recommendation putting an at-risk request first.
   - *Value and export:* the value arithmetic, no negative savings, the full audit trail, and CSV quoting including formula-like text.
+  - *Box layout:* piles never taller than six until the floor is full, 260 waiting requests each in their own spot on the floor, the next request on top of the first pile, the shelf ordered by completion time, and 163 completed requests packed into 13 crates that stay on the floor.
 - **Type checking** runs with TypeScript strict mode as part of every build.
 - **Browser checks** in headless Chrome at 1440×900, 1280×720 and a 390×844 phone: the full tour including the approval step, a busy morning through to the dashboard, chart tooltip and table view, and live AI mode against a mocked Claude API (checking the request headers, model ID, all five stage calls, output labels, and that the key stays in tab-only storage). Also: light graphics switching on by itself on a software renderer, the at-risk recommendation during a busy morning, the value figures updating when an assumption changes, and all three downloads opened and checked. Screenshots were inspected and the console checked for errors.
 - **CI** repeats the tests and build on every push before deploying.

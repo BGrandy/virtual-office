@@ -168,7 +168,7 @@ function AgentInspector({ id }: { id: AgentId }) {
       </header>
 
       <section className="now-card">
-        <div className="row between"><span className="now-text">{state}</span><span className="meta">{a.stagesCompleted} steps finished</span></div>
+        <div className="row between"><span className="now-text">{state}</span><span className="meta">{a.stagesCompleted} {a.stagesCompleted === 1 ? "step" : "steps"} finished</span></div>
         {a.say && <p className="say">"{a.say}"</p>}
         {current && (
           <button className="link-row" onClick={() => select({ kind: 'task', id: current.id })}>

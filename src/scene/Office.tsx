@@ -9,6 +9,7 @@ import { AGENT_STATION, STATIONS, station, type Station } from '../sim/layout';
 import type { AgentId, Stage } from '../sim/types';
 import { sim, useUI } from '../state/store';
 import { DESK_TOP, useCanvasTexture } from './helpers';
+import { ArchiveCrates, PileMats } from './Archive';
 import { anchorRef } from './labels';
 
 const INK = '#14233B';
@@ -107,11 +108,6 @@ function Desk({ id, n }: { id: AgentId; n: number }) {
           </mesh>
         </group>
       </group>
-      {/* in-tray */}
-      <mesh position={[-0.78, DESK_TOP + 0.02, 0]} receiveShadow>
-        <boxGeometry args={[0.46, 0.04, 0.46]} />
-        <meshStandardMaterial color="#D5DDE7" />
-      </mesh>
     </StationGroup>
     <FloorLabel st={st} n={n} title={STAGE_META[p.stage].label} sub={`${p.name}, ${p.role.toLowerCase()}`} color={p.color} />
     </>
@@ -226,10 +222,14 @@ function Archive() {
           <meshStandardMaterial color="#C9D3DE" />
         </mesh>
       ))}
-      <mesh position={[0, 1.02, -0.26]}>
-        <boxGeometry args={[2.1, 1.9, 0.03]} />
-        <meshStandardMaterial color="#D5DDE7" />
-      </mesh>
+      {/* open-backed, so the completed boxes are visible from any side */}
+      {[-1.05, 1.05].map((x) => (
+        <mesh key={`b${x}`} position={[x, 1.02, -0.22]} castShadow>
+          <boxGeometry args={[0.06, 1.9, 0.06]} />
+          <meshStandardMaterial color="#C9D3DE" />
+        </mesh>
+      ))}
+      <group ref={anchorRef('archive')} position={[0, 2.25, 0]} />
     </StationGroup>
     <FloorLabel st={st} n={null} title="Completed" sub="Closed and on record" color={INK} />
     </>
@@ -345,6 +345,8 @@ export function Office() {
       ))}
       <ApprovalConsole />
       <Archive />
+      <ArchiveCrates />
+      <PileMats />
       <BackWall />
       <Plant x={-10.8} z={-11} s={1.3} />
       <Plant x={10.8} z={-11} s={1.3} />
