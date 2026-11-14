@@ -72,9 +72,12 @@ describe('closing approved work', () => {
     const t = sim.createTask('custom', 'Give contractor John admin access to the finance system', 'ai');
     expect(buildStageRequest(t, 'delivery').user).not.toMatch(/supervisor approved this work/);
     t.outputs.push({ stage: 'approval', by: 'human', title: 'Approved by supervisor', body: 'ok', t: 1, kind: 'ok', source: 'human' });
-    const r = buildStageRequest(t, 'delivery');
-    expect(r.user).toMatch(/The supervisor approved this work/);
+    let r = buildStageRequest(t, 'delivery');
+    expect(r.user).toMatch(/Nothing was staged, so do not mention staging/);
     expect(r.system).toMatch(/Do not invent surnames/);
+    t.outputs.splice(0, 0, { stage: 'execution', by: 'bolt', title: 'Change log', body: 'Finance admin role for John: staged, not applied', t: 0, kind: 'ok', source: 'ai' });
+    r = buildStageRequest(t, 'delivery');
+    expect(r.user).toMatch(/you applied the changes that were staged/);
   });
 });
 

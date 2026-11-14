@@ -76,7 +76,12 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
   const notes: string[] = [];
   const approved = task.outputs.some((o) => o.by === 'human' && o.kind === 'ok' && o.stage === 'approval');
   if (stage === 'delivery' && approved) {
-    notes.push('The supervisor approved this work. As part of closing, you applied the changes that were staged for approval, so they are now live (with any time limit or expiry from the plan). Say that in the reply.');
+    const staged = task.outputs.some((o) => o.stage === 'execution' && /staged/i.test(o.body) && !/staged[^.\n]*:\s*none/i.test(o.body));
+    notes.push(
+      staged
+        ? 'The supervisor approved this work. As part of closing, you applied the changes that were staged for approval, so they are now live (with any time limit or expiry from the plan). Say that in the reply.'
+        : 'The supervisor approved this work. Nothing was staged, so do not mention staging; just confirm the outcome.',
+    );
   }
   if (stage === 'execution' && task.rework > 0) {
     const feedback = [...task.outputs].reverse().find((o) => o.kind === 'changes');
