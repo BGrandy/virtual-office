@@ -17,7 +17,7 @@ const INK = '#14233B';
 const WOOD = '#F7F9FB';
 
 /** Flat label painted on the floor in front of a station: step number + name. */
-function FloorLabel({ st, n, title, sub, color, dist }: { st: Station; n: number | null; title: string; sub: string; color: string; dist?: number }) {
+function FloorLabel({ st, n, title, sub, color, dist, side = 0 }: { st: Station; n: number | null; title: string; sub: string; color: string; dist?: number; side?: number }) {
   const tex = useCanvasTexture(
     (ctx, w, h) => {
       ctx.clearRect(0, 0, w, h);
@@ -61,7 +61,7 @@ function FloorLabel({ st, n, title, sub, color, dist }: { st: Station; n: number
   // Always reads left-to-right from the default camera; pushed further out beside side-on desks.
   const d = dist ?? 1.2 + 1.4 * Math.abs(st.inward[0]);
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[st.center[0] + st.inward[0] * d + 0.15, 0.1, st.center[1] + st.inward[1] * d]} renderOrder={2}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[st.center[0] + st.inward[0] * d + 0.15, 0.1, st.center[1] + st.inward[1] * d + side]} renderOrder={2}>
       <planeGeometry args={[3.4, 0.85]} />
       <meshBasicMaterial map={tex} transparent depthWrite={false} />
     </mesh>
@@ -121,7 +121,7 @@ function Desk({ id, n }: { id: AgentId; n: number }) {
         </group>
       </group>
     </StationGroup>
-    <FloorLabel st={st} n={n} title={STAGE_META[p.stage].label} sub={`${p.name}, ${p.role.toLowerCase()}`} color={p.color} />
+    <FloorLabel st={st} n={n} title={STAGE_META[p.stage].label} sub={`${p.name}, ${p.role.toLowerCase()}`} color={p.color} side={st.key === 'delivery' ? 1.0 : 0} />
     </>
   );
 }
