@@ -52,6 +52,7 @@ const ROWS: [string, 'Working' | 'Optional' | 'Simulated' | 'Proposed', string][
   ['Dashboard and guided tour', 'Working', 'Figures are computed live from the run, not made up.'],
   ['Response-time targets and audit export', 'Working', 'Countdowns per priority, alerts when a request is at risk, and each request\'s full history as JSON or CSV.'],
   ['Value estimate', 'Working', 'Calculated from this run and assumptions you can edit. An estimate, not a measurement.'],
+  ['Risk rules for typed requests', 'Working', 'Requests mentioning admin rights, sign-in security, deleting data, firewall changes, executive impersonation or changes for everyone always stop for approval, with or without a model.'],
   ['Saved state', 'Working', 'Progress is stored in your browser and survives a reload. "Reset demo" clears it.'],
   ['Live AI agents', 'Optional', 'With your own Claude API key, a real model triages, plans, writes the change log, reviews and replies. Off by default.'],
   ['Agent outputs without a key', 'Simulated', 'Scripted per scenario. Each output is labelled "Scripted" or with the model that wrote it.'],

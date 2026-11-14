@@ -292,7 +292,14 @@ export function scriptFor(task: Task, stage: WorkStage): StageScript {
   }
   if (stage === 'review' && tpl.rework && task.rework === 0) s = tpl.rework.review;
   const fill = (x: string) => x.replaceAll('{title}', task.title);
-  return { steps: s.steps.map(fill), output: { title: fill(s.output.title), body: fill(s.output.body) } };
+  let body = fill(s.output.body);
+  if (task.ruleRisk && tpl.id === 'custom') {
+    if (stage === 'triage') body += `\nRisk check: ${task.ruleRisk}. This will stop for your approval.`;
+    if (stage === 'planning') body += '\nRisky step: staged for approval, not applied until a person approves.';
+    if (stage === 'execution') body += '\nRisky change: staged, not applied.';
+    if (stage === 'review') body = `Work matches the plan.\nNeeds a person: ${task.ruleRisk.charAt(0).toLowerCase()}${task.ruleRisk.slice(1)}.`;
+  }
+  return { steps: s.steps.map(fill), output: { title: fill(s.output.title), body } };
 }
 
 /** True when the scripted reviewer will send this task back. */

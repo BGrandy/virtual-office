@@ -176,6 +176,7 @@ Off by default. Click **Connect AI**, paste an Anthropic API key, pick a model (
 | The model can | The engine enforces |
 |---|---|
 | Set the priority at triage | Priority only reorders queues |
+| Call a request safe | Fixed risk rules still stop requests that mention admin rights, sign-in security, deleting data, firewall changes, executive impersonation or changes for everyone |
 | Flag the plan as risky | Risky work always stops for a person |
 | Pass, request changes or escalate at review | One round of changes at most, then it goes to a person instead of looping |
 | Write every output | A malformed answer or failed call falls back to the scripted step, and the log says so |
@@ -205,6 +206,7 @@ A model can never skip review, approve its own work or change who owns a task. T
 | Value estimate | **Working, estimate** | Calculated from the run and editable assumptions, not measured savings |
 | Audit export (JSON, CSV) | **Working** | Times are simulated seconds |
 | Adaptive graphics | **Working** | Auto, Full or Light |
+| Rule-based risk check for typed requests | **Working** | Keyword rules in `src/sim/risk.ts`; runs with or without a model |
 | Guided tour | **Working** | Driven by real workflow events |
 | Saved state across reloads | **Working** | Browser storage only |
 | Live model-backed agents | **Optional, working** | Needs your own Claude API key. Off by default. Tested against a mocked API (see above) |
@@ -258,6 +260,7 @@ flowchart LR
 | `src/sim/engine.ts` | The orchestrator. Advances time, lets each agent pick up, work on and hand off tasks, applies supervisor commands, enforces the rules a model may not override, records stage timings, steers walking agents around each other, writes the event log. |
 | `src/sim/data.ts` | Agent profiles and the scripted steps and outputs for each scenario. |
 | `src/sim/metrics.ts` | Dashboard figures, the recommendation sentence and the value estimate, computed from engine state. |
+| `src/sim/risk.ts` | Rule-based risk screen for typed requests. |
 | `src/sim/sla.ts` | Response-time state for a request: on track, at risk, breached, met or missed. |
 | `src/sim/audit.ts` | Builds the JSON and CSV exports, with CSV quoting that guards against spreadsheet formula injection. |
 | `src/sim/layout.ts` | Station positions and the points agents walk between. |
@@ -266,7 +269,7 @@ flowchart LR
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
 | `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 57 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
+| `*.test.ts` | 63 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
 
@@ -354,6 +357,7 @@ flowchart TB
 - **Disclosure is built in.** A permanent badge in the top bar and a note on each agent, not just a line in this file.
 - **Scenarios were chosen to cover the paths.** Straight through, approval gate, rework loop and priority, so a reviewer can see each behaviour in about a minute.
 - **Colours were checked, not picked by eye.** Each agent has one colour, used on its robot, desk, floor marker and name tag. The five were chosen and ordered with a colour-blindness validator so that neighbouring desks stay distinguishable for common colour vision deficiencies. Agents are always named as well, so colour is never the only cue. Request boxes are neutral so they never borrow an agent's colour. Red means it needs you; gold marks you and the finished pile.
+- **Fixed rules under AI judgement.** Every typed request is screened by plain keyword rules before any agent sees it. A match always stops for a person, whether the agents are scripted or a live model has decided the work is safe. Without a key this keeps a typed "give John admin access" from sailing through; with a key it is a safety net the model cannot talk its way past.
 - **The model proposes, the engine decides.** Live AI changes who writes the work, not who controls the workflow. That boundary is the main thing I would keep in production.
 - **The tour follows the simulation.** Each step waits for a real event instead of a timer, so it cannot drift out of sync, and it still works if you send the request back instead of approving it.
 - **Earliest deadline first, not strict priority.** Strict priority can leave low-priority work waiting forever on a busy day. Ordering by deadline still puts urgent work first, because its deadline is shortest.
@@ -368,7 +372,7 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 57 unit tests
+npm test           # 63 unit tests
 npm run build      # type-check and build to dist/
 npm run preview    # serve the production build locally
 ```
@@ -387,11 +391,12 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 57 tests):
+- **Unit tests** (`npm test`, 63 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
   - *AI layer:* prompts contain only the right role and context, and malformed or out-of-range answers are rejected or ignored.
+  - *Risk rules:* the classic risky requests are flagged and routine ones are not (including "everyone's jobs are stuck"), a flagged typed request stops for approval without a model, a live model calling it safe cannot override the rule, and built-in scenarios are untouched.
   - *Spending guard:* pricing from published rates, usage adds up, a call that could cross the limit is refused, and 10,000 attempted calls never overspend.
   - *Dashboard:* autonomy share, the waiting/working split, and that the recommendation names a pile-up and slow approvals.
   - *Response targets:* on track to at risk to breached, a single breach event, met and missed on completion, earliest-deadline-first ordering, and the recommendation putting an at-risk request first.
@@ -403,7 +408,8 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## Limitations
 
-- Without an API key, agents are scripted, and typed requests get generic output.
+- Without an API key, agents are scripted, and typed requests get generic output (risky ones still stop for approval through the risk rules).
+- The risk rules are keyword-based, so they can miss a risky request worded in an unusual way, or occasionally flag a harmless one. In live mode the model's own judgement sits on top of them.
 - Live AI mode has been tested against a mocked API, not a real key. Model answers vary, so live runs are less predictable than the scripted ones, which is why scripted is the default for a demo.
 - Your API key sits in the browser while live mode is on. Fine for a demo with your own key; a production version would keep keys on a server.
 - No real IT systems or tools are connected in either mode.

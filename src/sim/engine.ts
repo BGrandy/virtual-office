@@ -12,6 +12,7 @@
 import { AGENTS, AGENT_IDS, PRIORITY_NAME, SLA_REAL, STAGE_DURATION, STAGE_META, STAGE_OWNER, actorName, getTemplate, outputTitle, reviewWillFail, scriptFor, type StageScript } from './data';
 import { AGENT_STATION, headingOf, station, type Station } from './layout';
 import { dueAt } from './sla';
+import { riskCheck } from './risk';
 import type { Actor, AgentId, AgentState, AIStageResult, ApprovalPolicy, EventType, Handoff, SimState, StageSpan, Task, Vec2, WorkStage } from './types';
 
 export const SAVE_VERSION = 5;
@@ -58,7 +59,7 @@ export class Simulation {
 
   /** Whether the orchestrator will stop this task for a person after review. */
   needsApproval(t: Task) {
-    return getTemplate(t.templateId).risky || !!t.aiRisky || this.state.policy === 'all';
+    return getTemplate(t.templateId).risky || !!t.aiRisky || !!t.ruleRisk || this.state.policy === 'all';
   }
 
   /**
@@ -99,6 +100,8 @@ export class Simulation {
       priority: tpl.priority, colorIndex: n % 6, stage: 'triage', status: 'queued', ownerId: 'iris',
       progress: 0, held: false, rework: 0, history: [], outputs: [], createdAt: s.time,
       timeline: [{ stage: 'triage', owner: 'iris', arrived: s.time }], mode, ai: {},
+      // Typed requests are screened by fixed rules; the built-in scenarios carry their own risk settings.
+      ruleRisk: tpl.id === 'custom' ? riskCheck(customTitle ?? '') : undefined,
     };
     s.tasks.push(t);
     this.log('created', `${t.requester} sent a new request: ${t.title}`, t.id);
@@ -336,7 +339,7 @@ export class Simulation {
     else if (stage === 'review') {
       if (changes) next = { stage: 'execution', ownerId: STAGE_OWNER.execution, kind: 'rework', note: 'Reviewer requested changes' };
       else if (escalate || this.needsApproval(t)) {
-        const reason = escalate ?? getTemplate(t.templateId).riskReason ?? t.riskReason ?? 'Your approval rule sends every task to you';
+        const reason = escalate ?? getTemplate(t.templateId).riskReason ?? t.riskReason ?? (t.ruleRisk ? `Risk rule: ${t.ruleRisk.charAt(0).toLowerCase()}${t.ruleRisk.slice(1)}` : undefined) ?? 'Your approval rule sends every task to you';
         t.riskReason = reason;
         next = { stage: 'approval', ownerId: 'human', kind: 'handoff', note: reason };
       } else next = { stage: 'delivery', ownerId: STAGE_OWNER.delivery, kind: 'handoff' };

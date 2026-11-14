@@ -101,6 +101,8 @@ export interface Task {
   riskReason?: string;
   /** Set when the live planner flags the work as risky. */
   aiRisky?: boolean;
+  /** Set when the rule-based risk screen matches a typed request. Always stops for a person. */
+  ruleRisk?: string;
   /** Set once when the request passes its response-time target while still open. */
   slaBreached?: boolean;
   /** Simulated seconds spent waiting for a live model to answer. Not counted against the target. */

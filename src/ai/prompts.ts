@@ -74,6 +74,9 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     .join('\n\n');
 
   const notes: string[] = [];
+  if (task.ruleRisk && (stage === 'planning' || stage === 'execution' || stage === 'review')) {
+    notes.push(`The desk's fixed risk rules flagged this request: ${task.ruleRisk}. A person will approve it before it goes live, whatever you decide, so stage the risky part rather than applying it.`);
+  }
   const approved = task.outputs.some((o) => o.by === 'human' && o.kind === 'ok' && o.stage === 'approval');
   if (stage === 'delivery' && approved) {
     const staged = task.outputs.some((o) => o.stage === 'execution' && /staged/i.test(o.body) && !/staged[^.\n]*:\s*none/i.test(o.body));
