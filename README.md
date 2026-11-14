@@ -155,7 +155,7 @@ Every figure is computed live from the run by `src/sim/metrics.ts`, which has it
 | Normal (P2) | 4 hours | 4 minutes |
 | Low (P3) | 8 hours | 8 minutes |
 
-The demo runs about 60 times faster than a real desk, so one simulated second stands for about one minute. A request is "at risk" in the last quarter of its target. Agents take the earliest deadline first, which puts urgent work ahead without letting old low-priority work wait forever. If a request passes its target while open, that is logged once as an event.
+The demo runs about 60 times faster than a real desk, so one simulated second stands for about one minute. In live AI mode, time spent waiting for the model's answer is not counted against the target: network latency is not desk time. A request is "at risk" in the last quarter of its target. Agents take the earliest deadline first, which puts urgent work ahead without letting old low-priority work wait forever. If a request passes its target while open, that is logged once as an event.
 
 ### Value estimate
 
@@ -266,7 +266,7 @@ flowchart LR
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
 | `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 52 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
+| `*.test.ts` | 54 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
 
@@ -368,7 +368,7 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 52 unit tests
+npm test           # 54 unit tests
 npm run build      # type-check and build to dist/
 npm run preview    # serve the production build locally
 ```
@@ -387,7 +387,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 52 tests):
+- **Unit tests** (`npm test`, 54 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.

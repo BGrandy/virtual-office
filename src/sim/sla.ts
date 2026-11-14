@@ -16,11 +16,12 @@ export interface SlaInfo {
 /** A request is "at risk" in the last quarter of its target. */
 const AT_RISK_SHARE = 0.25;
 
-export const dueAt = (t: Task) => t.createdAt + SLA_TARGET[t.priority];
+/** Deadline. Time spent waiting for a live model's answer pushes it back, so network latency is never "late". */
+export const dueAt = (t: Task) => t.createdAt + SLA_TARGET[t.priority] + (t.aiWait ?? 0);
 
 export function slaInfo(t: Task, now: number): SlaInfo | null {
   if (t.status === 'cancelled') return null;
-  const target = SLA_TARGET[t.priority];
+  const target = SLA_TARGET[t.priority] + (t.aiWait ?? 0);
   const due = dueAt(t);
   if (t.status === 'done') {
     const remaining = due - (t.completedAt ?? now);

@@ -5,13 +5,16 @@ import { sim } from '../state/store';
 
 export const clock = (t: number) => {
   const s = Math.max(0, Math.floor(t));
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  return s >= 3600 ? `${Math.floor(s / 3600)}:${mm}:${ss}` : `${mm}:${ss}`;
 };
 
 /** A length of time, e.g. "49s" or "2m 10s". */
 export const duration = (n: number) => {
   if (n > 0 && n < 1) return 'under 1s';
   const s = Math.floor(n);
+  if (s >= 3600) return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
   return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
 };
 

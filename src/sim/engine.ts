@@ -226,6 +226,8 @@ export class Simulation {
           if (!r) r = t.ai[key] = { status: 'pending' };
           if (r.status === 'pending') {
             this.hooks.requestAI?.(t, stage, key);
+            // Network time is not desk time: it does not count against the response target.
+            t.aiWait = (t.aiWait ?? 0) + dt;
             t.progress = Math.min(AI_HOLD, t.progress + dt / STAGE_DURATION[stage]);
             const say = t.progress >= AI_HOLD ? `Thinking with ${r.model ?? 'the model'}` : this.sayFor(t, stage);
             if (a.say !== say) { a.say = say; this.dirty = true; }

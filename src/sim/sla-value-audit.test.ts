@@ -114,3 +114,28 @@ describe('audit export', () => {
     expect(rows[2]).toContain(`"'=HYPERLINK(""http://bad"")"`);
   });
 });
+
+describe('response targets with a live model', () => {
+  it('does not count time spent waiting for the model against the target', () => {
+    // A model that takes a long time to answer each stage.
+    let pending: { id: string; key: string; due: number }[] = [];
+    let tick = 0;
+    const sim = new Simulation(null, {
+      requestAI: (t, _stage, key) => {
+        if (!pending.some((p) => p.id === t.id && p.key === key)) pending.push({ id: t.id, key, due: tick + 400 }); // 40 simulated seconds each
+      },
+    });
+    const t = sim.createTask('custom', 'Slow model, urgent request', 'ai');
+    t.priority = 'P1'; // 60s target
+    for (let i = 0; i < 20000 && t.status !== 'done'; i++) {
+      tick++;
+      for (const p of pending.filter((x) => x.due <= tick)) sim.provideAI(p.id, p.key, { status: 'done', steps: ['Working'], body: 'ok', verdict: 'pass' });
+      pending = pending.filter((x) => x.due > tick);
+      sim.step(0.1);
+    }
+    expect(t.status).toBe('done');
+    expect(t.aiWait!).toBeGreaterThan(150); // most of the time was the model
+    expect(slaInfo(t, sim.state.time)!.state).toBe('met');
+    expect(sim.state.events.some((e) => e.type === 'sla-breach')).toBe(false);
+  });
+});

@@ -28,8 +28,9 @@ const STEPS = {
 
 const INSTRUCTIONS: Record<WorkStage, string> = {
   triage:
-    'Classify the request. Set a priority: P1 if many people are blocked or a security incident is in progress, P2 for normal work, P3 if one person is affected and can carry on. ' +
-    'In body, write 3 to 5 short lines in the form "Label: value" covering type, priority with a reason, who is affected, and any missing information.',
+    'Classify the request and set a priority. P1 only for a security incident in progress, or when many people cannot do their core work and have no workaround (for example email or VPN down for a whole office). ' +
+    'P2 for normal work, including outages with a workaround, such as one printer down when others are available. P3 if one person is affected and can carry on. ' +
+    'In body, write 3 to 5 short lines in the form "Label: value" covering type, priority with a reason, who is affected, and an "Assumed:" line for any detail the requester left out (pick something sensible).',
   planning:
     'Write a numbered plan of 3 to 6 concrete steps in body, one per line. ' +
     'Set risky to true if any step changes production infrastructure, grants admin or elevated access, deletes data, or affects many users at once, and give a one-line risk_reason. Otherwise set risky to false.',
@@ -41,8 +42,9 @@ const INSTRUCTIONS: Record<WorkStage, string> = {
     '"changes" if something specific is missing or wrong (say exactly what to fix), or "escalate" if a person must decide. ' +
     'In body, write 2 to 5 lines of findings.',
   delivery:
-    'Write the reply to the requester in body: 2 to 4 friendly, plain-language sentences saying what was done and anything they need to do. ' +
-    'Then a blank line, then one line saying how the ticket was closed. If the supervisor approved something, mention that.',
+    'Write the reply to the requester in body: 2 to 4 friendly, plain-language sentences saying what was done, based on the change log, and anything they need to do. ' +
+    'Then a blank line, then one line saying how the ticket was closed. If the supervisor approved something, mention that. ' +
+    'Stay consistent with the work above: if it was done, say it is resolved; if something is genuinely still outstanding, say what and that a follow-up ticket was opened. Never call the ticket unresolved after the work and review are complete.',
 };
 
 const EXTRA_FIELDS: Partial<Record<WorkStage, { props: Record<string, unknown>; required: string[] }>> = {
@@ -58,7 +60,9 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     'The pipeline is: Iris triages, Atlas plans, Bolt executes, Sage reviews, the human supervisor approves anything risky, and Echo replies to the requester and closes the ticket.',
     `Your job: ${me.blurb}`,
     `Your limits: ${me.limits}`,
-    'This is a demonstration. You have no access to real systems. Describe the actions you would take and their expected results as a realistic, clearly simulated record. Invent device names or counts only where needed, and never include real personal data.',
+    'This is a demonstration. You have no access to real systems. Describe the actions you would take and their expected results as a realistic, clearly simulated record.',
+    'When a detail is missing (a device name, a count, an error message), do not stop to ask for it: assume something sensible, say so in one short line, and carry on. Use earlier agents\' assumptions where they exist. Never include real personal data.',
+    'Unless the request is genuinely unsafe or impossible, the simulated work succeeds, so the story ends with the problem solved.',
     'Write plainly in short lines. No markdown, no headings, no bold. Always answer by calling the submit tool.',
   ].join('\n');
 
