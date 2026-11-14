@@ -65,3 +65,15 @@ describe('prompt guidance', () => {
     expect(buildStageRequest(t, 'delivery').user).toMatch(/Never call the ticket unresolved/);
   });
 });
+
+describe('closing approved work', () => {
+  it('tells Echo that approved staged changes are applied when closing', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('custom', 'Give contractor John admin access to the finance system', 'ai');
+    expect(buildStageRequest(t, 'delivery').user).not.toMatch(/supervisor approved this work/);
+    t.outputs.push({ stage: 'approval', by: 'human', title: 'Approved by supervisor', body: 'ok', t: 1, kind: 'ok', source: 'human' });
+    const r = buildStageRequest(t, 'delivery');
+    expect(r.user).toMatch(/The supervisor approved this work/);
+    expect(r.system).toMatch(/Do not invent surnames/);
+  });
+});

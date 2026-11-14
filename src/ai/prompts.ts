@@ -63,6 +63,7 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     'This is a demonstration. You have no access to real systems. Describe the actions you would take and their expected results as a realistic, clearly simulated record.',
     'When a detail is missing (a device name, a count, an error message), do not stop to ask for it: assume something sensible, say so in one short line, and carry on. Use earlier agents\' assumptions where they exist. Never include real personal data.',
     'Unless the request is genuinely unsafe or impossible, the simulated work succeeds, so the story ends with the problem solved.',
+    'Use only the names given in the request. Do not invent surnames, people, approvals or sign-offs that are not recorded in the work so far.',
     'Write plainly in short lines. No markdown, no headings, no bold. Always answer by calling the submit tool.',
   ].join('\n');
 
@@ -71,6 +72,10 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     .join('\n\n');
 
   const notes: string[] = [];
+  const approved = task.outputs.some((o) => o.by === 'human' && o.kind === 'ok' && o.stage === 'approval');
+  if (stage === 'delivery' && approved) {
+    notes.push('The supervisor approved this work. As part of closing, you applied the changes that were staged for approval, so they are now live (with any time limit or expiry from the plan). Say that in the reply.');
+  }
   if (stage === 'execution' && task.rework > 0) {
     const feedback = [...task.outputs].reverse().find((o) => o.kind === 'changes');
     notes.push(`This is a revision. Fix exactly what was asked:\n${feedback?.body ?? task.humanNote ?? 'See the feedback above.'}`);
