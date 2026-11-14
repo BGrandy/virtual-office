@@ -82,7 +82,7 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     const staged = task.outputs.some((o) => o.stage === 'execution' && /staged/i.test(o.body) && !/staged[^.\n]*:\s*none/i.test(o.body));
     notes.push(
       staged
-        ? 'The supervisor approved this work. As part of closing, you applied the changes that were staged for approval, so they are now live (with any time limit or expiry from the plan). Say that in the reply.'
+        ? 'The supervisor approved this work. As part of closing, you applied the changes that were staged for approval, so they are now live. Say that in the reply in your own words, and mention an expiry date only if the plan set one.'
         : 'The supervisor approved this work. Nothing was staged, so do not mention staging; just confirm the outcome.',
     );
   }
