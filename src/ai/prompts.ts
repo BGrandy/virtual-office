@@ -38,6 +38,7 @@ const INSTRUCTIONS: Record<WorkStage, string> = {
     'Carry out every step of the plan in this one pass, including scheduling and notifications; no step belongs to a later stage. In body, write a change log: one line per action and its result. ' +
     'Where information is missing, apply the standard default and note it. If the plan marked a step as risky, stage it ("staged, not applied") instead of applying it.',
   review:
+    'If the change log shows the request was found not to be genuine but the requested change is still staged or applied, set verdict to "changes" and say it must be cancelled. ' +
     'Check the change log against the plan and normal IT security policy. Set verdict to "pass" if the work is complete and safe, ' +
     '"changes" only if the technician got something wrong or skipped something they could do right now (say exactly what to fix), ' +
     'or "escalate" only for a risk decision a person must make, such as a security concern or a policy exception. ' +
@@ -51,7 +52,7 @@ const INSTRUCTIONS: Record<WorkStage, string> = {
 
 const EXTRA_FIELDS: Partial<Record<WorkStage, { props: Record<string, unknown>; required: string[] }>> = {
   triage: { props: { priority: { type: 'string', enum: ['P1', 'P2', 'P3'] } }, required: ['priority'] },
-  planning: { props: { risky: { type: 'boolean' }, risk_reason: { type: 'string', description: 'One line. Empty if not risky.' } }, required: ['risky'] },
+  planning: { props: { risky: { type: 'boolean' }, risk_reason: { type: 'string', description: 'One short sentence, under 20 words. Empty if not risky.' } }, required: ['risky'] },
   review: { props: { verdict: { type: 'string', enum: ['pass', 'changes', 'escalate'] } }, required: ['verdict'] },
 };
 
@@ -66,6 +67,7 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     'When a detail is missing (a device name, a count, an error message), do not stop to ask for it: assume something sensible, say so in one short line, and carry on. Use earlier agents\' assumptions where they exist. Never include real personal data.',
     'Unless the request is genuinely unsafe or impossible, the simulated work succeeds, so the story ends with the problem solved.',
     'Any check, call or verification you carry out returns a definite result in the same pass. Never record one as pending or awaiting confirmation: pick the most plausible outcome (for example "CFO reached on the directory number and confirmed the request", or "CFO says they never called") and act on it.',
+    'If a verification shows a request is fraudulent or not genuine, the requested change is cancelled, never staged or applied, at every later step.',
     'Use only the names given in the request. Do not invent surnames, people, approvals or sign-offs that are not recorded in the work so far.',
     'Write plainly in short lines, and keep body under 120 words. No markdown, no headings, no bold. Always answer by calling the submit tool.',
   ].join('\n');
@@ -76,7 +78,7 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
 
   const notes: string[] = [];
   if (task.ruleRisk && (stage === 'planning' || stage === 'execution' || stage === 'review')) {
-    notes.push(`The desk's fixed risk rules flagged this request: ${task.ruleRisk}. A person will approve it before it goes live, whatever you decide, so stage the risky part rather than applying it.`);
+    notes.push(`The desk's fixed risk rules flagged this request: ${task.ruleRisk}. A person will approve it before it goes live, whatever you decide, so stage the risky part rather than applying it. Staging is only for a change that should go ahead once approved: if a check shows the request is not genuine (for example the real person denies making it), cancel the requested change instead, record it as "cancelled, not applied", and keep only protective steps such as locks or alerts. The supervisor then signs off the refusal.`);
   }
   const approved = task.outputs.some((o) => o.by === 'human' && o.kind === 'ok' && o.stage === 'approval');
   if (stage === 'delivery' && approved) {
@@ -85,6 +87,9 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
       staged
         ? 'The supervisor approved this work. As part of closing, you applied the changes that were staged for approval, so they are now live. Say that in the reply in your own words, and mention an expiry date only if the plan set one. Exception: if the change log shows the change was cancelled or refused (for example a failed identity check), nothing was applied; say that instead.'
         : 'The supervisor approved this work. Nothing was staged, so do not mention staging; just confirm the outcome.',
+    );
+    notes.push(
+      'If the work shows the request was not genuine, the supervisor approved the refusal and the protective steps: the requested change was NOT made. Say so plainly.',
     );
   }
   if (stage === 'execution' && task.rework > 0) {

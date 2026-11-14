@@ -100,3 +100,21 @@ describe('keeping work moving', () => {
     expect(clip('short', 500)).toBe('short');
   });
 });
+
+describe('requests found not to be genuine', () => {
+  it('tells every later agent to cancel, not stage, and Echo to say nothing was changed', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('custom', "Reset MFA for someone who called saying they're the CFO", 'ai');
+    expect(t.ruleRisk).toBeTruthy();
+    expect(buildStageRequest(t, 'execution').user).toMatch(/cancel the requested change instead/);
+    expect(buildStageRequest(t, 'review').user).toMatch(/must be cancelled/);
+    t.outputs.push({ stage: 'approval', by: 'human', title: 'Approved by supervisor', body: 'ok', t: 1, kind: 'ok', source: 'human' });
+    expect(buildStageRequest(t, 'delivery').user).toMatch(/the requested change was NOT made/);
+  });
+
+  it('keeps a long risk reason whole words', () => {
+    const r = parseStage({ content: [{ type: 'tool_use', input: { steps: ['x'], body: 'b', risky: true, risk_reason: 'word '.repeat(80) } }] }, 'planning', 'x');
+    expect(r.riskReason!.length).toBeLessThanOrEqual(222);
+    expect(r.riskReason!.endsWith('word …')).toBe(true);
+  });
+});

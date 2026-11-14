@@ -121,7 +121,7 @@ export function parseStage(data: { content?: { type: string; input?: Record<stri
   if (stage === 'triage' && ['P1', 'P2', 'P3'].includes(input.priority as string)) r.priority = input.priority as Priority;
   if (stage === 'planning') {
     r.risky = input.risky === true;
-    if (r.risky && typeof input.risk_reason === 'string') r.riskReason = input.risk_reason.trim().slice(0, 140);
+    if (r.risky && typeof input.risk_reason === 'string') r.riskReason = clip(input.risk_reason.trim(), 220);
   }
   if (stage === 'review') {
     const v = input.verdict;
