@@ -21,27 +21,39 @@ function FloorLabel({ st, n, title, sub, color, dist }: { st: Station; n: number
   const tex = useCanvasTexture(
     (ctx, w, h) => {
       ctx.clearRect(0, 0, w, h);
-      let x = 12;
+      const x = n !== null ? 140 : 28;
+      // Solid plate sized to the words, so the route line and anything else on the floor passes underneath.
+      ctx.font = '700 60px "Bricolage Grotesque Variable", sans-serif';
+      const tw = ctx.measureText(title).width;
+      ctx.font = '500 34px "Instrument Sans Variable", sans-serif';
+      const sw = ctx.measureText(sub).width;
+      const pw = Math.min(w - 8, x + Math.max(tw, sw) + 30);
+      ctx.beginPath();
+      ctx.roundRect(4, 4, pw, h - 8, 26);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(20,35,59,0.18)';
+      ctx.stroke();
       if (n !== null) {
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(64, h / 2, 52, 0, Math.PI * 2);
+        ctx.arc(72, h / 2, 50, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.font = '700 62px "Bricolage Grotesque Variable", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(String(n), 64, h / 2 + 4);
-        x = 140;
+        ctx.fillText(String(n), 72, h / 2 + 4);
       }
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = INK;
       ctx.font = '700 60px "Bricolage Grotesque Variable", sans-serif';
-      ctx.fillText(title, x, 74);
-      ctx.fillStyle = 'rgba(20,35,59,0.62)';
+      ctx.fillText(title, x, 76);
+      ctx.fillStyle = 'rgba(20,35,59,0.72)';
       ctx.font = '500 34px "Instrument Sans Variable", sans-serif';
-      ctx.fillText(sub, x, 122);
+      ctx.fillText(sub, x, 124);
     },
     640, 160, `${n}${title}${sub}`,
   );
@@ -49,7 +61,7 @@ function FloorLabel({ st, n, title, sub, color, dist }: { st: Station; n: number
   // Always reads left-to-right from the default camera; pushed further out beside side-on desks.
   const d = dist ?? 1.2 + 1.4 * Math.abs(st.inward[0]);
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[st.center[0] + st.inward[0] * d + 0.15, 0.012, st.center[1] + st.inward[1] * d]}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[st.center[0] + st.inward[0] * d + 0.15, 0.1, st.center[1] + st.inward[1] * d]} renderOrder={2}>
       <planeGeometry args={[3.4, 0.85]} />
       <meshBasicMaterial map={tex} transparent depthWrite={false} />
     </mesh>
@@ -161,12 +173,12 @@ function ApprovalConsole() {
     <>
     <StationGroup st={st}>
       {/* raised platform marks the human checkpoint as different from agent desks */}
-      <mesh position={[0, 0.04, -0.3]} receiveShadow>
-        <cylinderGeometry args={[2.1, 2.2, 0.08, 48]} />
+      <mesh position={[0, 0.04, -0.6]} receiveShadow>
+        <cylinderGeometry args={[1.55, 1.62, 0.08, 48]} />
         <meshStandardMaterial color="#FFF4D6" roughness={0.7} />
       </mesh>
-      <mesh ref={ring} position={[0, 0.09, -0.3]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[1.95, 2.1, 64]} />
+      <mesh ref={ring} position={[0, 0.09, -0.6]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.43, 1.56, 64]} />
         <meshStandardMaterial color="#E5484D" emissive="#E5484D" emissiveIntensity={0.2} side={DoubleSide} />
       </mesh>
       {/* console */}
@@ -200,7 +212,7 @@ function ApprovalConsole() {
         <group ref={anchorRef('human')} position={[0, 1.85, 0]} />
       </group>
     </StationGroup>
-    <FloorLabel st={st} n={5} title="Approve" sub="You decide on risky work" color="#E5484D" />
+    <FloorLabel st={st} n={5} title="Approve" sub="You decide on risky work" color="#E5484D" dist={2.7} />
     </>
   );
 }
@@ -230,7 +242,7 @@ function FlowLine() {
         <meshBasicMaterial color="#B7A98F" />
       </mesh>
       <instancedMesh ref={dots} args={[undefined, undefined, N]}>
-        <sphereGeometry args={[0.075, 10, 10]} />
+        <sphereGeometry args={[0.06, 10, 10]} />
         <meshBasicMaterial color="#8C7B5E" />
       </instancedMesh>
     </group>
