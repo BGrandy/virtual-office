@@ -65,6 +65,7 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     'This is a demonstration. You have no access to real systems. Describe the actions you would take and their expected results as a realistic, clearly simulated record.',
     'When a detail is missing (a device name, a count, an error message), do not stop to ask for it: assume something sensible, say so in one short line, and carry on. Use earlier agents\' assumptions where they exist. Never include real personal data.',
     'Unless the request is genuinely unsafe or impossible, the simulated work succeeds, so the story ends with the problem solved.',
+    'Any check, call or verification you carry out returns a definite result in the same pass. Never record one as pending or awaiting confirmation: pick the most plausible outcome (for example "CFO reached on the directory number and confirmed the request", or "CFO says they never called") and act on it.',
     'Use only the names given in the request. Do not invent surnames, people, approvals or sign-offs that are not recorded in the work so far.',
     'Write plainly in short lines, and keep body under 120 words. No markdown, no headings, no bold. Always answer by calling the submit tool.',
   ].join('\n');
@@ -82,13 +83,13 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     const staged = task.outputs.some((o) => o.stage === 'execution' && /staged/i.test(o.body) && !/staged[^.\n]*:\s*none/i.test(o.body));
     notes.push(
       staged
-        ? 'The supervisor approved this work. As part of closing, you applied the changes that were staged for approval, so they are now live. Say that in the reply in your own words, and mention an expiry date only if the plan set one.'
+        ? 'The supervisor approved this work. As part of closing, you applied the changes that were staged for approval, so they are now live. Say that in the reply in your own words, and mention an expiry date only if the plan set one. Exception: if the change log shows the change was cancelled or refused (for example a failed identity check), nothing was applied; say that instead.'
         : 'The supervisor approved this work. Nothing was staged, so do not mention staging; just confirm the outcome.',
     );
   }
   if (stage === 'execution' && task.rework > 0) {
     const feedback = [...task.outputs].reverse().find((o) => o.kind === 'changes');
-    notes.push(`This is a revision. Fix exactly what was asked:\n${feedback?.body ?? task.humanNote ?? 'See the feedback above.'}`);
+    notes.push(`This is a revision. Do exactly what was asked, record its result, and act on that result (for example cancel the change if a verification fails):\n${feedback?.body ?? task.humanNote ?? 'See the feedback above.'}`);
   }
   if (stage === 'review' && task.rework > 0) {
     notes.push('This is the second review. If it is still not right, choose "escalate" so a person decides, rather than "changes".');

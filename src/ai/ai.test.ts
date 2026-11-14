@@ -61,6 +61,7 @@ describe('prompt guidance', () => {
     const t = sim.createTask('custom', 'Printer on floor 2 is offline', 'ai');
     const triage = buildStageRequest(t, 'triage');
     expect(triage.system).toMatch(/do not stop to ask/);
+    expect(triage.system).toMatch(/Never record one as pending/);
     expect(triage.user).toMatch(/one printer down when others are available/);
     expect(buildStageRequest(t, 'delivery').user).toMatch(/Never call the ticket unresolved/);
   });
