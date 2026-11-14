@@ -3,6 +3,9 @@
 
 import type { AIStageResult, Priority, Task, WorkStage } from '../sim/types';
 import { buildStageRequest } from './prompts';
+import { MAX_OUTPUT_TOKENS } from './budget';
+
+export interface CallUsage { inputTokens: number; outputTokens: number }
 
 export const MODELS = [
   { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', note: 'Fastest and cheapest. Recommended.' },
@@ -43,7 +46,7 @@ async function post(conn: Conn, body: Record<string, unknown>) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new APIError(explain(res.status, data?.error?.message), res.status);
-    return data as { content?: { type: string; name?: string; input?: Record<string, unknown>; text?: string }[] };
+    return data as { content?: { type: string; name?: string; input?: Record<string, unknown>; text?: string }[]; usage?: { input_tokens?: number; output_tokens?: number } };
   } catch (e) {
     if (e instanceof APIError) throw e;
     if ((e as Error).name === 'AbortError') throw new APIError('the model took too long to answer');
@@ -62,15 +65,20 @@ function explain(status: number, msg?: string) {
   return msg ? `API error ${status}: ${msg}` : `API error ${status}`;
 }
 
+const usageOf = (d: { usage?: { input_tokens?: number; output_tokens?: number } }): CallUsage => ({
+  inputTokens: d.usage?.input_tokens ?? 0,
+  outputTokens: d.usage?.output_tokens ?? 0,
+});
+
 /** Cheap call used by "Test and turn on". */
-export async function testConnection(conn: Conn): Promise<void> {
-  await post(conn, { max_tokens: 16, messages: [{ role: 'user', content: 'Reply with the single word OK.' }] });
+export async function testConnection(conn: Conn): Promise<CallUsage> {
+  return usageOf(await post(conn, { max_tokens: 16, messages: [{ role: 'user', content: 'Reply with the single word OK.' }] }));
 }
 
 /** Run one agent's stage and convert the tool call into the shape the engine expects. */
-export async function runStage(conn: Conn, task: Task, stage: WorkStage): Promise<AIStageResult> {
+export async function runStage(conn: Conn, task: Task, stage: WorkStage, onUsage?: (u: CallUsage) => void): Promise<AIStageResult> {
   const req = buildStageRequest(task, stage);
-  const base = { max_tokens: 900, system: req.system, tools: [req.tool], messages: [{ role: 'user', content: req.user }] };
+  const base = { max_tokens: MAX_OUTPUT_TOKENS, system: req.system, tools: [req.tool], messages: [{ role: 'user', content: req.user }] };
   let data;
   try {
     data = await post(conn, { ...base, tool_choice: { type: 'tool', name: req.tool.name } });
@@ -79,6 +87,8 @@ export async function runStage(conn: Conn, task: Task, stage: WorkStage): Promis
     if (e instanceof APIError && e.status === 400) data = await post(conn, { ...base, tool_choice: { type: 'auto' } });
     else throw e;
   }
+  // Count what was actually used, even if the answer turns out to be malformed.
+  onUsage?.(usageOf(data));
   return parseStage(data, stage, conn.model);
 }
 

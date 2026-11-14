@@ -113,7 +113,7 @@ function TaskInspector({ t }: { t: Task }) {
             <pre>{o.body}</pre>
             {o.source && o.source !== 'human' && (
               <p className={`src src-${o.source}`}>
-                {o.source === 'ai' ? `Written by ${o.model ?? 'a live model'}` : o.source === 'fallback' ? 'Scripted fallback: the model call failed' : 'Scripted'}
+                {o.source === 'ai' ? `Written by ${o.model ?? 'a live model'}` : o.source === 'fallback' ? `Scripted fallback: ${o.note ?? 'the model call failed'}` : 'Scripted'}
               </p>
             )}
           </details>

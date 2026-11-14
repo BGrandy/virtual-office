@@ -73,7 +73,7 @@ export class Simulation {
   }
 
   /** The steps and output for a stage: the live model's if it answered, otherwise the script. */
-  stageScript(t: Task, stage: WorkStage): StageScript & { source: 'script' | 'ai' | 'fallback'; model?: string; ai?: AIStageResult } {
+  stageScript(t: Task, stage: WorkStage): StageScript & { source: 'script' | 'ai' | 'fallback'; model?: string; ai?: AIStageResult; note?: string } {
     if (t.mode === 'ai') {
       const r = t.ai[aiKey(t, stage)];
       if (r?.status === 'done') {
@@ -83,7 +83,7 @@ export class Simulation {
           source: 'ai', model: r.model, ai: r,
         };
       }
-      if (r?.status === 'error') return { ...scriptFor(t, stage), source: 'fallback' };
+      if (r?.status === 'error') return { ...scriptFor(t, stage), source: 'fallback', note: r.error };
     }
     return { ...scriptFor(t, stage), source: 'script' };
   }
@@ -321,7 +321,7 @@ export class Simulation {
 
     t.outputs.push({
       stage, by: a.id, title: script.output.title, body: script.output.body, t: s.time,
-      kind: changes || escalate ? 'changes' : 'ok', source: script.source, model: script.model,
+      kind: changes || escalate ? 'changes' : 'ok', source: script.source, model: script.model, note: script.note,
     });
     a.stagesCompleted++;
     this.closeSpan(t);

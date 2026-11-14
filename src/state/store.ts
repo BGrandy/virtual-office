@@ -6,7 +6,8 @@
 // - Live AI calls are made here, outside the engine, and results are handed back with provideAI.
 
 import { create } from 'zustand';
-import { errorMessage, modelLabel, runStage, testConnection } from '../ai/anthropic';
+import { errorMessage, modelLabel, runStage, testConnection, type CallUsage } from '../ai/anthropic';
+import { DEFAULT_LIMIT, EMPTY_USAGE, MAX_CONCURRENT, addUsage, canAfford, dollars, type Usage } from '../ai/budget';
 import { BUSY_MORNING } from '../sim/data';
 import { Simulation } from '../sim/engine';
 import { DEFAULT_VALUE, type ValueAssumptions } from '../sim/metrics';
@@ -16,6 +17,7 @@ const KEY = 'atrium.sim.v5';
 const SEEN_KEY = 'atrium.seen-welcome';
 const AI_KEY = 'atrium.ai';
 const VALUE_KEY = 'atrium.value';
+const USAGE_KEY = 'atrium.ai.usage';
 const QUALITY_KEY = 'atrium.quality';
 
 export type Quality = 'auto' | 'full' | 'light';
@@ -45,8 +47,10 @@ export interface AISettings {
   apiKey: string;
   model: string;
   remember: boolean;
+  /** Maximum estimated spend on this device, in US dollars. */
+  limit: number;
 }
-const DEFAULT_AI: AISettings = { enabled: false, apiKey: '', model: 'claude-haiku-5-5', remember: false };
+const DEFAULT_AI: AISettings = { enabled: false, apiKey: '', model: 'claude-haiku-5-5', remember: false, limit: DEFAULT_LIMIT };
 
 function loadAI(): AISettings {
   const raw = store.get(AI_KEY) ?? store.get(AI_KEY, true);
@@ -58,23 +62,44 @@ function persistAI(a: AISettings) {
   store.set(AI_KEY, a.remember ? null : JSON.stringify(a), true);
 }
 
+// ------------------------------------------------------------ spending guard
+
+// Kept per device (not per tab), so reloading or opening a new tab does not reset it.
+function loadUsage(): Usage {
+  try { return { ...EMPTY_USAGE, ...JSON.parse(store.get(USAGE_KEY) ?? '{}') }; } catch { return EMPTY_USAGE; }
+}
+function recordUsage(model: string, u: CallUsage) {
+  const usage = addUsage(useUI.getState().usage, model, u.inputTokens, u.outputTokens);
+  store.set(USAGE_KEY, JSON.stringify(usage));
+  useUI.setState({ usage });
+}
+
 // --------------------------------------------------------------- live AI calls
 
 const inFlight = new Set<string>();
 function requestAI(task: Task, stage: WorkStage, key: string) {
   const id = `${task.id}|${key}`;
   if (inFlight.has(id)) return;
-  const ai = useUI.getState().ai;
+  const { ai, usage } = useUI.getState();
   if (!ai.enabled || !ai.apiKey) {
     sim.provideAI(task.id, key, { status: 'error', error: 'live AI is turned off' });
     return;
   }
+  // Never start a call that could take spending past the limit. Live AI switches itself off.
+  if (!canAfford(usage, ai.model, ai.limit)) {
+    sim.provideAI(task.id, key, { status: 'error', error: `spending limit of ${dollars(ai.limit)} reached` });
+    actions.saveAI({ enabled: false });
+    useUI.setState({ aiError: `Spending limit of ${dollars(ai.limit)} reached, so live AI was switched off. Raise the limit or reset the counter to continue.` });
+    return;
+  }
+  // Keep bursts small: the engine asks again next frame, so waiting work is not lost.
+  if (inFlight.size >= MAX_CONCURRENT) return;
   inFlight.add(id);
   const slot = task.ai[key];
   if (slot) slot.model = modelLabel(ai.model);
   // Snapshot the task so later changes do not alter what this call sees.
   const snapshot = JSON.parse(JSON.stringify(task)) as Task;
-  runStage({ apiKey: ai.apiKey, model: ai.model }, snapshot, stage)
+  runStage({ apiKey: ai.apiKey, model: ai.model }, snapshot, stage, (u) => recordUsage(ai.model, u))
     .then((r) => sim.provideAI(task.id, key, r))
     .catch((e) => {
       const msg = errorMessage(e);
@@ -107,6 +132,8 @@ interface UIState {
   tour: { step: number; taskId?: string; prevSpeed: number } | null;
   ai: AISettings;
   aiError?: string;
+  /** Live AI spending so far on this device. */
+  usage: Usage;
   value: ValueAssumptions;
   /** Graphics setting chosen by the viewer, and whether auto mode has dropped to light. */
   quality: Quality;
@@ -132,6 +159,7 @@ export const useUI = create<UIState>((set) => ({
   leftOpen: !isNarrow(),
   tour: null,
   ai: loadAI(),
+  usage: loadUsage(),
   value: (() => { try { return { ...DEFAULT_VALUE, ...JSON.parse(store.get(VALUE_KEY) ?? '{}') }; } catch { return DEFAULT_VALUE; } })(),
   quality: (() => {
     const q = new URLSearchParams(typeof location !== 'undefined' ? location.search : '').get('quality') ?? store.get(QUALITY_KEY);
@@ -171,7 +199,10 @@ const run = <T,>(fn: () => T): T => {
 
 export const actions = {
   createTask: (templateId: string, title?: string) => run(() => sim.createTask(templateId, title, mode())),
-  busyMorning: () => run(() => BUSY_MORNING.map((id) => sim.createTask(id, undefined, mode()))),
+  busyMorning: () => {
+    if (mode() === 'ai' && !confirm(`Live AI is on. A busy morning sends ${BUSY_MORNING.length} requests, up to ${BUSY_MORNING.length * 5} model calls, within your ${dollars(useUI.getState().ai.limit)} spending limit. Continue?`)) return [];
+    return run(() => BUSY_MORNING.map((id) => sim.createTask(id, undefined, mode())));
+  },
   approve: (id: string, note?: string) => run(() => sim.approve(id, note)),
   reject: (id: string, note?: string) => run(() => sim.reject(id, note)),
   setHeld: (id: string, held: boolean) => run(() => sim.setHeld(id, held)),
@@ -220,12 +251,17 @@ export const actions = {
     persistAI(next);
     useUI.setState({ ai: next, aiError: undefined });
   },
-  testAndEnableAI: async (apiKey: string, model: string, remember: boolean) => {
-    await testConnection({ apiKey, model });
-    actions.saveAI({ enabled: true, apiKey, model, remember });
+  testAndEnableAI: async (apiKey: string, model: string, remember: boolean, limit: number) => {
+    if (!canAfford(useUI.getState().usage, model, limit)) throw new Error(`the spending limit of ${dollars(limit)} has already been reached on this device; raise it or reset the counter`);
+    recordUsage(model, await testConnection({ apiKey, model }));
+    actions.saveAI({ enabled: true, apiKey, model, remember, limit });
+  },
+  resetUsage: () => {
+    store.set(USAGE_KEY, null);
+    useUI.setState({ usage: EMPTY_USAGE, aiError: undefined });
   },
   disableAI: () => actions.saveAI({ enabled: false }),
-  forgetAI: () => actions.saveAI({ ...DEFAULT_AI }),
+  forgetAI: () => actions.saveAI({ ...DEFAULT_AI, limit: useUI.getState().ai.limit }),
 };
 
 // ------------------------------------------------------------------- main loop

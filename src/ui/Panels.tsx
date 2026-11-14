@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { modelLabel } from '../ai/anthropic';
+import { dollars } from '../ai/budget';
 import { TEMPLATES } from '../sim/data';
 import type { SimEvent, Task } from '../sim/types';
 import { actions, isNarrow, useSim, useUI } from '../state/store';
@@ -9,6 +10,7 @@ import { Pipeline, PriorityTag, SlaChip, clock, duration, statusText } from './b
 export function TopBar() {
   const s = useSim();
   const ai = useUI((st) => st.ai);
+  const usage = useUI((st) => st.usage);
   const { setDialog, resetCamera, toggleLeft } = useUI.getState();
   const live = s.tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');
   const waiting = s.tasks.filter((t) => t.status === 'awaiting-approval').length;
@@ -23,7 +25,7 @@ export function TopBar() {
       </div>
       {ai.enabled ? (
         <button className="sim-badge is-live" onClick={() => setDialog('ai')} title="Live AI settings">
-          <i className="live-dot" /><span>Live AI<span className="hide-narrow">: {modelLabel(ai.model)}, systems simulated</span></span>
+          <i className="live-dot" /><span>Live AI<span className="hide-narrow">: {modelLabel(ai.model)}, {dollars(usage.cost)} of {dollars(ai.limit)} used</span></span>
         </button>
       ) : (
         <button className="sim-badge" onClick={() => setDialog('about')} title="What is real and what is simulated">

@@ -186,6 +186,8 @@ A model can never skip review, approve its own work or change who owns a task. T
 
 **The key.** It is sent only from your browser to `api.anthropic.com`, using the API's opt-in header for direct browser calls. There is no Atrium server. By default it is kept for the current tab only; "Remember on this device" is opt-in. One request makes five short calls, a fraction of a cent with Haiku.
 
+**Spending limit.** Live mode has a hard cap on this device: $0.10, $0.25 (default) or $1.00. Every call's real token use (from the API response) is priced at the published rates and added up. Before each call, the app checks that even a worst-case call (largest possible prompt, full 900-token answer) cannot take the total past the limit; if it could, the call is not made, live AI switches itself off, and that step uses its script, labelled with the reason. The counter survives reloads and new tabs and can be reset. At most three calls run at once, and "Simulate a busy morning" asks before sending eight requests in live mode. With Haiku, one request costs roughly a fifth of a cent, so the default limit covers well over a hundred requests. This is an estimate; the Console's billing page is the real record, and a spend limit there is the account-level backstop.
+
 **Honest scope.** I tested this path end to end against a mocked API that returns realistic tool calls. The request format, headers, model ID and response parsing are all checked, but a reviewer with a real key is the first live run.
 
 ![A request worked by a live model](docs/live-ai.png)
@@ -264,7 +266,7 @@ flowchart LR
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
 | `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 47 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
+| `*.test.ts` | 52 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
 
@@ -366,7 +368,7 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 47 unit tests
+npm test           # 52 unit tests
 npm run build      # type-check and build to dist/
 npm run preview    # serve the production build locally
 ```
@@ -385,11 +387,12 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 47 tests):
+- **Unit tests** (`npm test`, 52 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
   - *AI layer:* prompts contain only the right role and context, and malformed or out-of-range answers are rejected or ignored.
+  - *Spending guard:* pricing from published rates, usage adds up, a call that could cross the limit is refused, and 10,000 attempted calls never overspend.
   - *Dashboard:* autonomy share, the waiting/working split, and that the recommendation names a pile-up and slow approvals.
   - *Response targets:* on track to at risk to breached, a single breach event, met and missed on completion, earliest-deadline-first ordering, and the recommendation putting an at-risk request first.
   - *Value and export:* the value arithmetic, no negative savings, the full audit trail, and CSV quoting including formula-like text.

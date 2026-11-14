@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MODELS, errorMessage, modelLabel } from '../ai/anthropic';
+import { LIMIT_OPTIONS, callsLeft, dollars, worstCaseCall } from '../ai/budget';
 import { actions, useUI } from '../state/store';
 
 function Dialog({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
@@ -102,12 +103,28 @@ function About({ onClose }: { onClose: () => void }) {
   );
 }
 
+function SpendMeter({ usage, model, limit }: { usage: { calls: number; cost: number; inputTokens: number; outputTokens: number }; model: string; limit: number }) {
+  const share = Math.min(1, usage.cost / limit);
+  return (
+    <div className="spend">
+      <div className="row between">
+        <span><strong>{dollars(usage.cost)}</strong> of {dollars(limit)} used on this device</span>
+        {usage.calls > 0 && <button type="button" className="text-btn" onClick={actions.resetUsage}>Reset counter</button>}
+      </div>
+      <span className="spend-bar"><span style={{ width: `${share * 100}%` }} className={share > 0.8 ? 'hot' : ''} /></span>
+      <span className="meta">{usage.calls} {usage.calls === 1 ? 'call' : 'calls'}, {(usage.inputTokens + usage.outputTokens).toLocaleString()} tokens. Room for at least {Math.floor(callsLeft(usage, model, limit) / 5)} more requests. An estimate from published prices; your Console billing page is the real record.</span>
+    </div>
+  );
+}
+
 function AIDialog({ onClose }: { onClose: () => void }) {
   const ai = useUI((s) => s.ai);
   const lastError = useUI((s) => s.aiError);
   const [key, setKey] = useState(ai.apiKey);
   const [model, setModel] = useState(ai.model);
   const [remember, setRemember] = useState(ai.remember);
+  const [limit, setLimit] = useState(ai.limit);
+  const usage = useUI((s) => s.usage);
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -116,7 +133,7 @@ function AIDialog({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setMsg(null);
     try {
-      await actions.testAndEnableAI(key.trim(), model, remember);
+      await actions.testAndEnableAI(key.trim(), model, remember, limit);
       setMsg({ ok: true, text: `Connected. New requests will be worked by ${modelLabel(model)}.` });
     } catch (e) {
       setMsg({ ok: false, text: `Could not connect: ${errorMessage(e)}. Nothing was changed.` });
@@ -134,7 +151,9 @@ function AIDialog({ onClose }: { onClose: () => void }) {
         <li><strong>The rules stay in charge.</strong> The model can suggest a priority, flag risk or ask for changes. It cannot skip review, approve its own work or loop: the workflow engine enforces that.</li>
         <li><strong>Still no real systems.</strong> Agents describe what they would do. Nothing is changed anywhere.</li>
         <li><strong>Your key stays with you.</strong> It is sent only from this browser to api.anthropic.com. There is no Atrium server. A request makes five short calls, a fraction of a cent with Haiku.</li>
+        <li><strong>Spending is capped.</strong> Every call's real token use is added up on this device, and no call is made that could take the total past your limit. At the limit, live AI switches itself off.</li>
       </ul>
+      <SpendMeter usage={usage} model={ai.enabled ? ai.model : model} limit={ai.enabled ? ai.limit : limit} />
 
       {ai.enabled ? (
         <div className="ai-on">
@@ -157,6 +176,12 @@ function AIDialog({ onClose }: { onClose: () => void }) {
           <label htmlFor="ai-model">Model</label>
           <select id="ai-model" value={model} onChange={(e) => setModel(e.target.value)}>
             {MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}: {m.note}</option>)}
+          </select>
+          <label htmlFor="ai-limit">Spending limit on this device</label>
+          <select id="ai-limit" value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
+            {LIMIT_OPTIONS.map((l) => (
+              <option key={l} value={l}>{dollars(l)}: at least {Math.floor(l / worstCaseCall(model) / 5)} requests with {modelLabel(model)}</option>
+            ))}
           </select>
           <label className="check">
             <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />

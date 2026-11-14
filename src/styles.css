@@ -316,6 +316,10 @@ textarea { resize: vertical; }
 .ok { background: var(--good-bg); color: #0b6a4c; }
 .err { background: var(--alert-bg); color: var(--alert); }
 .ai-on { margin-top: 18px; }
+.spend { margin-top: 14px; padding: 10px 12px; background: var(--mist); border-radius: 10px; display: grid; gap: 6px; font-size: 13px; }
+.spend-bar { display: block; height: 6px; border-radius: 3px; background: #fff; overflow: hidden; }
+.spend-bar span { display: block; height: 100%; background: var(--good); border-radius: 0 3px 3px 0; }
+.spend-bar span.hot { background: var(--alert); }
 .ai-on p + p { margin-top: 8px; }
 .st-optional { background: var(--good-bg); color: #0b6a4c; }
 .dialog-wide { width: min(760px, 100%); }

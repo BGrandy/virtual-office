@@ -32,6 +32,8 @@ export interface Output {
   /** Who wrote the text: a script, a live model, or the supervisor. */
   source?: 'script' | 'ai' | 'human' | 'fallback';
   model?: string;
+  /** Why the scripted fallback was used, when it was. */
+  note?: string;
 }
 
 /** How a task's stage work is produced. */
