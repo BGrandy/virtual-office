@@ -10,10 +10,10 @@ import type { AgentId, Stage } from '../sim/types';
 import { sim, useUI } from '../state/store';
 import { DESK_TOP, useCanvasTexture } from './helpers';
 import { CentreAndAnchors } from './Archive';
+import { Room } from './Room';
 import { anchorRef } from './labels';
 
 const INK = '#14233B';
-const FLOOR = '#EEF2F6';
 const WOOD = '#F7F9FB';
 
 /** Flat label painted on the floor in front of a station: step number + name. */
@@ -227,11 +227,11 @@ function FlowLine() {
     <group>
       <mesh>
         <tubeGeometry args={[curve, 160, 0.035, 6, false]} />
-        <meshBasicMaterial color="#C3CEDB" />
+        <meshBasicMaterial color="#B7A98F" />
       </mesh>
       <instancedMesh ref={dots} args={[undefined, undefined, N]}>
         <sphereGeometry args={[0.075, 10, 10]} />
-        <meshBasicMaterial color="#8FA1B8" />
+        <meshBasicMaterial color="#8C7B5E" />
       </instancedMesh>
     </group>
   );
@@ -254,51 +254,11 @@ function Plant({ x, z, s = 1 }: { x: number; z: number; s?: number }) {
   );
 }
 
-function BackWall() {
-  const tex = useCanvasTexture(
-    (ctx, w, h) => {
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = INK;
-      ctx.font = '800 150px "Bricolage Grotesque Variable", sans-serif';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Atrium', 20, h / 2 - 30);
-      ctx.fillStyle = 'rgba(20,35,59,0.6)';
-      ctx.font = '500 52px "Instrument Sans Variable", sans-serif';
-      ctx.fillText('IT service desk, run by agents, supervised by people', 26, h / 2 + 86);
-    },
-    1536, 320, 'sign',
-  );
-  return (
-    <group position={[0, 0, -12.2]}>
-      <mesh position={[0, 1.7, 0]} castShadow receiveShadow>
-        <boxGeometry args={[18, 3.4, 0.25]} />
-        <meshStandardMaterial color="#F7F9FB" roughness={0.9} />
-      </mesh>
-      {tex && (
-        <mesh position={[-3.2, 2.0, 0.14]}>
-          <planeGeometry args={[9.6, 2]} />
-          <meshBasicMaterial map={tex} transparent />
-        </mesh>
-      )}
-      {/* window band */}
-      {[4.2, 6.3, 8.4].map((x) => (
-        <mesh key={x} position={[x - 0.6, 2.0, 0.14]}>
-          <planeGeometry args={[1.7, 1.9]} />
-          <meshStandardMaterial color="#BFD9F2" emissive="#BFD9F2" emissiveIntensity={0.35} roughness={0.2} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
 export function Office() {
   const stageNumber: Partial<Record<Stage, number>> = { triage: 1, planning: 2, execution: 3, review: 4, delivery: 6 };
   return (
     <group>
-      {/* floor slab */}
-      <RoundedBox args={[25, 0.5, 22]} radius={0.2} position={[0, -0.25, -3.2]} receiveShadow>
-        <meshStandardMaterial color={FLOOR} roughness={0.95} />
-      </RoundedBox>
+      <Room />
       <FlowLine />
       <Inbox />
       {(Object.keys(AGENTS) as AgentId[]).map((id) => (
@@ -307,11 +267,10 @@ export function Office() {
       <ApprovalConsole />
       <CentreAndAnchors />
       <FloorLabel st={station('archive')} n={null} title="Completed" sub="Every finished request" color={INK} dist={3.35} />
-      <BackWall />
-      <Plant x={-10.8} z={-11} s={1.3} />
-      <Plant x={10.8} z={-11} s={1.3} />
-      <Plant x={-11} z={6.4} />
-      <Plant x={11} z={6.4} />
+      <Plant x={-11.2} z={-12.6} s={1.3} />
+      <Plant x={9.6} z={-12.8} s={1.2} />
+      <Plant x={-11.3} z={6.5} />
+      <Plant x={11.2} z={2.6} s={0.9} />
     </group>
   );
 }

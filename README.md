@@ -8,7 +8,7 @@ A browser-based 3D office where five AI agents work an IT support queue as a tea
 | **Repository** | https://github.com/BGrandy/virtual-office |
 | **Status** | Working demo. Agents are scripted by default, with an optional live mode where a real Claude model does each step using your own API key. No real IT system is touched in either mode. See [What is real](#what-is-real-simulated-and-proposed). |
 
-![The office with towers of waiting work on the desks and the gold pyramid of finished work in the middle](docs/office.png)
+![The office: agents at their desks, waiting work stacked beside them, and the gold pyramid of finished work in the middle](docs/office.png)
 
 **Highlights**
 
@@ -267,7 +267,7 @@ flowchart LR
 | `src/ai/prompts.ts` | Builds one agent's request for one step: role, limits, the work so far, and a typed tool schema. |
 | `src/ai/anthropic.ts` | Calls the Messages API from the browser, validates the answer, and turns failures into a clear error so the engine can fall back. |
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
-| `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
+| `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `Room.tsx` builds the walls, floor and furniture; `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
 | `*.test.ts` | 65 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
@@ -351,6 +351,7 @@ flowchart TB
 - **Ownership is physical.** A task has one location and so one owner. This removes the most common confusion in multi-agent views.
 - **The human is drawn as a person, on a raised platform, in a different colour.** The approval step should look different from the automated steps because it is different.
 - **Work you can count at a glance.** Waiting requests stack into a tower on the owner's desk. The next one is at the bottom, so when it is taken the tower drops a level, Jenga-style. The taller the tower, the more it sways, and once it is tall the agent starts glancing up at it nervously (and eventually sweating). Ten boxes are shown; a tag on top gives the full count. Finished requests are carried to the middle of the room and turn gold as they build a pyramid: filled from the bottom up so no box floats, and rebuilt one size larger when it outgrows its base. It grows wider faster than taller, so even 500 requests stay on screen. The placement rules are unit-tested.
+- **It looks like an office, and the walls never get in the way.** Wood floor, three walls with windows onto a city view, a whiteboard sketch of the workflow, a sofa, bookshelf, printer and water cooler. The front is open to the camera, and any wall you orbit behind hides itself.
 - **The room is a horseshoe in workflow order.** Work moves left to right around it, so position tells you progress. Floor numbers match the pipeline in the side panel.
 - **Three ways to read the same state.** The room for a glance, the request list for the queue, the inspector for detail. All three are driven by the same engine state, so they cannot disagree.
 - **Blocked on a human is the loudest thing on screen.** Red is used only for that and for rework.
