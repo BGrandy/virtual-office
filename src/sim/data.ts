@@ -64,6 +64,15 @@ export const STAGE_OWNER: Record<WorkStage, AgentId> = {
   triage: 'iris', planning: 'atlas', execution: 'bolt', review: 'sage', delivery: 'echo',
 };
 
+/**
+ * Response-time targets (SLAs) per priority, in simulated seconds.
+ * The demo runs roughly 60 times faster than a real desk, so one simulated second
+ * stands for about one real minute: 60s here is a 1-hour target.
+ */
+export const SLA_TARGET: Record<Priority, number> = { P1: 60, P2: 240, P3: 480 };
+export const SLA_REAL: Record<Priority, string> = { P1: '1 hour', P2: '4 hours', P3: '8 hours' };
+export const PRIORITY_NAME: Record<Priority, string> = { P1: 'Urgent', P2: 'Normal', P3: 'Low' };
+
 /** Seconds of simulated work per stage at 1x speed. */
 export const STAGE_DURATION: Record<WorkStage, number> = {
   triage: 5, planning: 6.5, execution: 11, review: 6.5, delivery: 5.5,

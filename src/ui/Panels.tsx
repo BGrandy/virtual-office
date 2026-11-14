@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { modelLabel } from '../ai/anthropic';
 import { TEMPLATES } from '../sim/data';
 import type { SimEvent, Task } from '../sim/types';
 import { actions, isNarrow, useSim, useUI } from '../state/store';
 import { Dashboard } from './Dashboard';
-import { Pipeline, PriorityTag, clock, duration, statusText } from './bits';
+import { Pipeline, PriorityTag, SlaChip, clock, duration, statusText } from './bits';
 
 export function TopBar() {
   const s = useSim();
@@ -55,6 +55,7 @@ export function TopBar() {
 }
 
 function TaskRow({ t }: { t: Task }) {
+  const now = useSim().time;
   const selected = useUI((s) => s.selected?.kind === 'task' && s.selected.id === t.id);
   const select = useUI((s) => s.select);
   return (
@@ -62,7 +63,7 @@ function TaskRow({ t }: { t: Task }) {
       <button className={`task-row${selected ? ' is-selected' : ''}${t.status === 'awaiting-approval' ? ' is-alert' : ''}`} onClick={() => select({ kind: 'task', id: t.id })}>
         <span className="task-top">
           <span className="task-id">{t.id}{t.mode === 'ai' && <span className="mode-tag">Live AI</span>}</span>
-          <PriorityTag p={t.priority} />
+          <span className="row-tags"><SlaChip task={t} now={now} /><PriorityTag p={t.priority} /></span>
         </span>
         <span className="task-title">{t.title}</span>
         <Pipeline task={t} />
@@ -129,7 +130,7 @@ function NewRequest({ compact }: { compact: boolean }) {
 }
 
 const EVENT_TONE: Partial<Record<SimEvent['type'], string>> = {
-  created: 'new', completed: 'good', approved: 'good', 'approval-requested': 'alert', rejected: 'alert', rework: 'alert', 'ai-error': 'alert',
+  created: 'new', completed: 'good', approved: 'good', 'approval-requested': 'alert', rejected: 'alert', rework: 'alert', 'ai-error': 'alert', 'sla-breach': 'alert',
   held: 'you', resumed: 'you', cancelled: 'you', reassigned: 'you', policy: 'you', handoff: 'move',
 };
 
@@ -201,6 +202,28 @@ export function LeftPanel() {
   );
 }
 
+/** Navigation help, replaced for a few seconds when graphics drop to light mode. */
+function NavHint() {
+  const autoLight = useUI((st) => st.autoLight);
+  const [shownAt, setShownAt] = useState<number | null>(null);
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!autoLight) return;
+    setShownAt(Date.now());
+    const id = setTimeout(() => force((n) => n + 1), 7000);
+    return () => clearTimeout(id);
+  }, [autoLight]);
+  if (shownAt && Date.now() - shownAt < 7000) {
+    return (
+      <div className="nav-hint is-note" role="status">
+        Switched to light graphics for smoother motion.{' '}
+        <button className="inline-link" onClick={() => useUI.getState().setDialog('about')}>Change</button>
+      </div>
+    );
+  }
+  return <div className="nav-hint" aria-hidden="true">Drag to look around. Scroll to zoom. Right-drag to move. Click an agent or a box.</div>;
+}
+
 /** Bottom nudge: tells the supervisor when something is blocked on them. */
 export function AttentionBar() {
   const s = useSim();
@@ -214,9 +237,7 @@ export function AttentionBar() {
   const waiting = s.tasks.filter((t) => t.status === 'awaiting-approval');
   const first = waiting[0];
   if (!first || (selected?.kind === 'task' && waiting.some((t) => t.id === selected.id))) {
-    return (
-      <div className="nav-hint" aria-hidden="true">Drag to look around. Scroll to zoom. Right-drag to move. Click an agent or a box.</div>
-    );
+    return <NavHint />;
   }
   return (
     <div className="attention" role="status">

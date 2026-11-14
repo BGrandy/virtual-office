@@ -1,7 +1,8 @@
 // Team performance figures for the dashboard, computed from engine state only.
 // Pure functions, so they are unit-tested and would run unchanged on a server.
 
-import { AGENTS, AGENT_IDS, PIPELINE, STAGE_META, STAGE_OWNER, actorName } from './data';
+import { AGENTS, AGENT_IDS, PIPELINE, PRIORITY_NAME, SLA_REAL, STAGE_META, STAGE_OWNER, actorName } from './data';
+import { slaInfo, type SlaInfo } from './sla';
 import type { AgentId, SimState, Stage, Task, WorkStage } from './types';
 
 export interface StageStat {
@@ -38,6 +39,10 @@ export interface Metrics {
   stages: StageStat[];
   agents: AgentStat[];
   human: { approvals: number; changes: number; holds: number; reassigns: number; cancels: number; waiting: number };
+  /** Share of completed requests closed within their response-time target. */
+  slaMet: number;
+  /** Open requests that are at risk or already late, most urgent first. */
+  slaAlerts: { task: Task; sla: SlaInfo }[];
   insight: string;
 }
 
@@ -89,10 +94,90 @@ export function computeMetrics(s: SimState): Metrics {
     waiting: tasks.filter((t) => t.status === 'awaiting-approval').length,
   };
 
+  const slaMet = done.length ? done.filter((t) => slaInfo(t, s.time)?.state === 'met').length / done.length : 0;
+  const slaAlerts = open
+    .map((task) => ({ task, sla: slaInfo(task, s.time)! }))
+    .filter((x) => x.sla && (x.sla.state === 'at-risk' || x.sla.state === 'breached'))
+    .sort((a, b) => a.sla.remaining - b.sla.remaining);
+
   return {
     created: tasks.length, open: open.length, completed: done.length, cancelled: tasks.filter((t) => t.status === 'cancelled').length,
-    avgCycle, autonomy, reworkRate, stages, agents, human,
-    insight: insightFor(stages, agents, done.length, human.waiting),
+    avgCycle, autonomy, reworkRate, stages, agents, human, slaMet, slaAlerts,
+    insight: slaInsight(slaAlerts) ?? insightFor(stages, agents, done.length, human.waiting),
+  };
+}
+
+/** Where a request is, in words, for the recommendation sentence. */
+function whereIs(t: Task) {
+  if (t.status === 'awaiting-approval') return 'waiting for your approval';
+  if (t.held) return 'on hold';
+  if (t.status === 'queued') return `waiting in ${actorName(t.ownerId)}'s tray`;
+  if (t.status === 'handoff') return 'being handed on';
+  return `with ${actorName(t.ownerId)}`;
+}
+
+/** A request about to miss (or already past) its target outranks every other recommendation. */
+export function slaInsight(alerts: { task: Task; sla: SlaInfo }[]): string | undefined {
+  const first = alerts[0];
+  if (!first) return undefined;
+  const { task: t, sla } = first;
+  const what = `${t.id} (${PRIORITY_NAME[t.priority].toLowerCase()})`;
+  const action =
+    t.status === 'awaiting-approval' ? 'Decide on it now.'
+    : t.held ? 'Resume it if it can go ahead.'
+    : t.status === 'queued' ? `Give this step to a free agent, or hold less urgent work at that desk.`
+    : 'It is being worked on; keep an eye on it.';
+  const more = alerts.length > 1 ? ` ${alerts.length - 1} more ${alerts.length === 2 ? 'request is' : 'requests are'} close behind.` : '';
+  if (sla.state === 'breached') return `${what} has missed its ${SLA_REAL[t.priority]} target and is ${whereIs(t)}. ${action}${more}`;
+  return `${what} is due in ${secs(sla.remaining)} and is ${whereIs(t)}. ${action}${more}`;
+}
+
+// ------------------------------------------------------------------ business value
+
+export interface ValueAssumptions {
+  /** Minutes a technician spends on a typical request handled entirely by hand. */
+  manualMinutes: number;
+  /** Minutes of a person's time each time they step in (approve, send back, reassign, hold). */
+  touchMinutes: number;
+  /** Fully loaded cost of an hour of IT staff time. */
+  hourlyCost: number;
+  /** Requests the desk handles on a working day. */
+  requestsPerDay: number;
+}
+
+export const DEFAULT_VALUE: ValueAssumptions = { manualMinutes: 25, touchMinutes: 4, hourlyCost: 45, requestsPerDay: 40 };
+const WORKING_DAYS_PER_MONTH = 21;
+
+export interface ValueEstimate {
+  completed: number;
+  /** Times a person stepped in on the completed requests. */
+  touches: number;
+  /** Average minutes of human time per request with Atrium. */
+  humanMinutesPerRequest: number;
+  /** Minutes saved per request compared with doing it by hand. */
+  savedMinutesPerRequest: number;
+  /** Hours saved across the requests completed in this run. */
+  savedHoursRun: number;
+  monthlyHours: number;
+  monthlyCost: number;
+}
+
+/** Converts this run's mix of requests into time and cost saved. An estimate from the assumptions, not a measurement. */
+export function valueEstimate(s: SimState, a: ValueAssumptions): ValueEstimate | null {
+  const done = new Set(s.tasks.filter((t) => t.status === 'done').map((t) => t.id));
+  if (!done.size) return null;
+  const touches = s.events.filter((e) => e.actor === 'human' && e.taskId && done.has(e.taskId) && ['approved', 'rejected', 'held', 'reassigned'].includes(e.type)).length;
+  const humanMinutesPerRequest = (touches * a.touchMinutes) / done.size;
+  const savedMinutesPerRequest = Math.max(0, a.manualMinutes - humanMinutesPerRequest);
+  const monthlyHours = (a.requestsPerDay * WORKING_DAYS_PER_MONTH * savedMinutesPerRequest) / 60;
+  return {
+    completed: done.size,
+    touches,
+    humanMinutesPerRequest,
+    savedMinutesPerRequest,
+    savedHoursRun: (done.size * savedMinutesPerRequest) / 60,
+    monthlyHours,
+    monthlyCost: monthlyHours * a.hourlyCost,
   };
 }
 

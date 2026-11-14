@@ -99,6 +99,8 @@ export interface Task {
   riskReason?: string;
   /** Set when the live planner flags the work as risky. */
   aiRisky?: boolean;
+  /** Set once when the request passes its response-time target while still open. */
+  slaBreached?: boolean;
   createdAt: number;
   completedAt?: number;
 }
@@ -122,7 +124,7 @@ export interface AgentState {
 export type EventType =
   | 'created' | 'started' | 'step' | 'output' | 'handoff' | 'rework'
   | 'approval-requested' | 'approved' | 'rejected' | 'completed'
-  | 'held' | 'resumed' | 'cancelled' | 'reassigned' | 'policy' | 'ai-error';
+  | 'held' | 'resumed' | 'cancelled' | 'reassigned' | 'policy' | 'ai-error' | 'sla-breach';
 
 export interface SimEvent {
   id: number;

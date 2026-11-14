@@ -9,13 +9,13 @@
 // priority, flag risk or ask for changes, but it can never skip review, approve
 // its own work, or loop forever: those rules live here, not in a prompt.
 
-import { AGENTS, AGENT_IDS, STAGE_DURATION, STAGE_META, STAGE_OWNER, actorName, getTemplate, outputTitle, reviewWillFail, scriptFor, type StageScript } from './data';
+import { AGENTS, AGENT_IDS, PRIORITY_NAME, SLA_REAL, STAGE_DURATION, STAGE_META, STAGE_OWNER, actorName, getTemplate, outputTitle, reviewWillFail, scriptFor, type StageScript } from './data';
 import { AGENT_STATION, headingOf, station, type Station } from './layout';
+import { dueAt } from './sla';
 import type { Actor, AgentId, AgentState, AIStageResult, ApprovalPolicy, EventType, Handoff, SimState, StageSpan, Task, Vec2, WorkStage } from './types';
 
 export const SAVE_VERSION = 5;
 const WALK_SPEED = 3.4;
-const PRIORITY_RANK = { P1: 0, P2: 1, P3: 2 } as const;
 /** While waiting on a live model, the progress bar creeps up to here and holds. */
 const AI_HOLD = 0.8;
 /** The orchestrator allows one rework pass from the reviewer; after that it escalates to a person. */
@@ -61,11 +61,15 @@ export class Simulation {
     return getTemplate(t.templateId).risky || !!t.aiRisky || this.state.policy === 'all';
   }
 
-  /** Tasks waiting on an agent's desk, in the order the agent will take them. */
+  /**
+   * Tasks waiting on an agent's desk, in the order the agent will take them:
+   * earliest response-time deadline first, so urgent work jumps ahead but old
+   * low-priority work is not starved forever. Held tasks go last and are skipped.
+   */
   queueFor(id: AgentId) {
     return this.state.tasks
       .filter((t) => t.ownerId === id && t.status === 'queued')
-      .sort((a, b) => Number(a.held) - Number(b.held) || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.createdAt - b.createdAt);
+      .sort((a, b) => Number(a.held) - Number(b.held) || dueAt(a) - dueAt(b) || a.createdAt - b.createdAt);
   }
 
   /** The steps and output for a stage: the live model's if it answered, otherwise the script. */
@@ -182,6 +186,12 @@ export class Simulation {
     const d = dt * s.speed;
     s.time += d;
     for (const id of AGENT_IDS) this.tickAgent(s.agents[id], d);
+    for (const t of s.tasks) {
+      if (!t.slaBreached && t.status !== 'done' && t.status !== 'cancelled' && s.time > dueAt(t)) {
+        t.slaBreached = true;
+        this.log('sla-breach', `${t.id} missed its ${SLA_REAL[t.priority]} response target (${PRIORITY_NAME[t.priority].toLowerCase()} priority).`, t.id);
+      }
+    }
   }
 
   private tickAgent(a: AgentState, dt: number) {

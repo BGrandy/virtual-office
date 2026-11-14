@@ -49,13 +49,33 @@ const ROWS: [string, 'Working' | 'Optional' | 'Simulated' | 'Proposed', string][
   ['Workflow engine', 'Working', 'A tested state machine handles ownership, queues, priority, handoffs, rework, escalation and the approval gate.'],
   ['Supervisor controls', 'Working', 'Approve, request changes, hold, resume, reassign, cancel and the approval rule all change the run.'],
   ['Dashboard and guided tour', 'Working', 'Figures are computed live from the run, not made up.'],
+  ['Response-time targets and audit export', 'Working', 'Countdowns per priority, alerts when a request is at risk, and each request\'s full history as JSON or CSV.'],
+  ['Value estimate', 'Working', 'Calculated from this run and assumptions you can edit. An estimate, not a measurement.'],
   ['Saved state', 'Working', 'Progress is stored in your browser and survives a reload. "Reset demo" clears it.'],
   ['Live AI agents', 'Optional', 'With your own Claude API key, a real model triages, plans, writes the change log, reviews and replies. Off by default.'],
   ['Agent outputs without a key', 'Simulated', 'Scripted per scenario. Each output is labelled "Scripted" or with the model that wrote it.'],
   ['IT systems (directory, firewall, mail)', 'Simulated', 'Never connected, in either mode. Even live agents only describe what they would do.'],
   ['Server orchestration and multi-user view', 'Proposed', 'The engine moves to a server and streams the same events to every viewer.'],
-  ['Real tool access, audit export, SLA alerts, ticketing integration', 'Proposed', 'Described in the README roadmap.'],
+  ['Real tool access and ticketing integration', 'Proposed', 'Described in the README roadmap.'],
 ];
+
+function GraphicsSetting() {
+  const quality = useUI((s) => s.quality);
+  const autoLight = useUI((s) => s.autoLight);
+  return (
+    <div className="graphics">
+      <span>Graphics</span>
+      <div className="seg" role="group" aria-label="Graphics quality">
+        {(['auto', 'full', 'light'] as const).map((q) => (
+          <button key={q} className={quality === q ? 'on' : ''} aria-pressed={quality === q} onClick={() => actions.setQuality(q)}>
+            {q === 'auto' ? 'Auto' : q === 'full' ? 'Full' : 'Light'}
+          </button>
+        ))}
+      </div>
+      <span className="meta">{quality === 'auto' ? (autoLight ? 'Running light (no shadows) for smoother motion on this device.' : 'Full detail. Drops to light automatically if motion gets choppy.') : quality === 'light' ? 'No shadows, lower resolution. Smoothest on older laptops.' : 'Shadows and full resolution.'}</span>
+    </div>
+  );
+}
 
 function About({ onClose }: { onClose: () => void }) {
   return (
@@ -72,6 +92,7 @@ function About({ onClose }: { onClose: () => void }) {
           ))}
         </tbody>
       </table>
+      <GraphicsSetting />
       <div className="row end">
         <button className="btn ghost" onClick={() => { if (confirm('Clear all requests and start over?')) actions.reset(); }}>Reset demo</button>
         <button className="btn ghost" onClick={() => useUI.getState().setDialog('ai')}>Connect a model</button>

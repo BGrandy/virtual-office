@@ -10,6 +10,7 @@ import { Celebrations, HandoffArcs } from './Effects';
 import { Office } from './Office';
 import { packetTarget } from './helpers';
 import { syncLabels } from './labels';
+import { QualityManager, useLightGraphics } from './Quality';
 
 const HOME_TARGET = new Vector3(0, 0.6, -2.4);
 const HOME_DIR = new Vector3(0, 16.4, 22.7).normalize();
@@ -124,6 +125,7 @@ function Packets() {
 
 export default function Scene() {
   const select = useUI((s) => s.select);
+  const light = useLightGraphics();
   return (
     <Canvas
       shadows
@@ -137,7 +139,7 @@ export default function Scene() {
       <directionalLight
         position={[9, 18, 10]}
         intensity={1.9}
-        castShadow
+        castShadow={!light}
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-18}
         shadow-camera-right={18}
@@ -163,6 +165,7 @@ export default function Scene() {
         keyPanSpeed={24}
       />
       <CameraRig />
+      <QualityManager />
     </Canvas>
   );
 }

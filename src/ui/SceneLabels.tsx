@@ -4,6 +4,7 @@ import { AGENTS, AGENT_IDS, HUMAN, STAGE_META } from '../sim/data';
 import { labelRef } from '../state/labelRegistry';
 import { sim, useSim, useUI } from '../state/store';
 import type { AgentId } from '../sim/types';
+import { slaInfo } from '../sim/sla';
 
 const ACTIVITY = { idle: 'idle', working: 'working', carrying: 'handing off', returning: 'walking back' } as const;
 
@@ -59,7 +60,7 @@ export function SceneLabels() {
         return (
           <div key={t.id} className="lbl" ref={labelRef(`task:${t.id}`)}>
             <button
-              className={`chip${on ? ' is-selected' : ''}${t.status === 'awaiting-approval' ? ' is-alert' : ''}`}
+              className={`chip${on ? ' is-selected' : ''}${t.status === 'awaiting-approval' ? ' is-alert' : ''} chip-${slaInfo(t, s.time)?.state ?? 'none'}`}
               onClick={() => select({ kind: 'task', id: t.id })}
               aria-label={`${t.id}, ${STAGE_META[t.stage].label}`}
             >

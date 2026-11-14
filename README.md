@@ -16,6 +16,9 @@ A browser-based 3D office where five AI agents work an IT support queue as a tea
 - **Live AI mode (optional).** Paste a Claude API key and every agent's step becomes a real model call. Type any IT request and watch it get triaged, planned, executed, reviewed and answered. The workflow engine, not the model, decides who gets the work next.
 - **Manager dashboard.** Where each request's time goes (waiting vs working, per step), which desk is the bottleneck right now, how often people had to step in, and a plain-language recommendation.
 - **Human in charge.** Risky work stops for approval. The supervisor can approve, send back with a note, hold, reassign or cancel anything at any time.
+- **Response-time targets.** Every request has a deadline set by its priority, a live countdown, and an alert before it is missed. Queues are worked earliest-deadline-first.
+- **Business value and audit.** The dashboard turns the run into hours and cost saved using assumptions you can edit, and every request's full history downloads as JSON or CSV.
+- **Runs on modest laptops.** On a weak or software-only graphics chip, or if motion gets choppy, it switches itself to a lighter mode.
 
 ## Contents
 
@@ -66,7 +69,7 @@ Separating the technician from the reviewer is deliberate. It is the same contro
 
 **Supervising.** The lead clicks the box, reads the reviewer's summary ("4 of 4 steps match the plan, MFA enforced, admin licence is outside what agents may grant alone") and approves it, optionally with a note. Echo picks it up and closes it out. If something looks wrong, the lead chooses "Request changes" instead, types what to fix, and the request goes back to the technician with that note attached.
 
-**During an incident.** A VPN outage comes in as urgent. It jumps the queue at every desk. The agents diagnose it and stage a firewall fix with a rollback, but the fix does not go live until a person approves it.
+**During an incident.** A VPN outage comes in as urgent, with a one-hour response target. It jumps the queue at every desk because agents always take the earliest deadline first. The agents diagnose it and stage a firewall fix with a rollback, but the fix does not go live until a person approves it. As the deadline gets close, the countdown turns amber and the dashboard tells the lead to decide on it now.
 
 **Stepping in at any time.** On any open request the supervisor can:
 
@@ -77,7 +80,7 @@ Separating the technician from the reviewer is deliberate. It is the same contro
 
 **Afterwards.** Every request keeps its full trail: who had it, when it changed hands, what each agent produced and what the human decided. That is the audit record.
 
-**End of the week.** The lead opens the dashboard. It shows that most of each request's time is spent waiting for approval, not working, and that the technician's desk is where queues build. That turns into two concrete decisions: widen the approval rule for one low-risk request type, and add a second technician agent.
+**End of the week.** The lead opens the dashboard. It shows that most of each request's time is spent waiting for approval, not working, and that the technician's desk is where queues build. That turns into two concrete decisions: widen the approval rule for one low-risk request type, and add a second technician agent. The value panel, filled in with the team's own numbers, gives the hours and cost saved for the monthly report, and the request export goes to whoever audits changes.
 
 The business case in one line: people stop doing the routine 80 percent and keep control of the risky 20 percent, with a view that makes the handover between the two obvious.
 
@@ -94,7 +97,10 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Approve or reject | When a request stops for you, a red bar appears at the bottom and the box pulses on your console. Open it, read the review, then "Approve" or "Request changes". |
 | Hold, reassign, cancel | Open the request, section "Step in". |
 | Change the approval rule | Click "You" at the supervisor console. |
-| See team performance | Left panel, "Dashboard". |
+| See team performance | Left panel, "Dashboard". Open "Assumptions" in the value panel to enter your own numbers. |
+| Check deadlines | Every request shows "Due in…", which turns amber when at risk and red when late. |
+| Export a request's history | Open the request, "Audit record", then "Download JSON" or "Download CSV". All requests: Dashboard, "Download all requests (CSV)". |
+| Change graphics quality | Top bar badge ("What's real?"), then Graphics: Auto, Full or Light. Or add `?quality=light` to the URL. |
 | Read the full log | Left panel, "Log". Click any line to jump to that request. |
 | Use a real model | Top bar, "Connect AI". See [Live AI mode](#live-ai-mode). |
 | Control time | Top bar: Pause, 1x, 2x, 4x. |
@@ -133,15 +139,31 @@ Every figure is computed live from the run by `src/sim/metrics.ts`, which has it
 
 | Section | What it answers |
 |---|---|
-| **What to act on** | One plain-language sentence, chosen by rules: a pile-up at a desk right now, requests stuck waiting for you, or otherwise the step that takes the biggest share of each request's time. |
-| **Tiles** | Completed, average time to close, share closed without any human action, share sent back for changes. |
+| **What to act on** | One plain-language sentence, chosen by rules in this order: a request about to miss (or past) its response target, a pile-up at a desk right now, requests stuck waiting for you, or otherwise the step that takes the biggest share of each request's time. |
+| **Tiles** | Completed, average time to close, share closed without any human action, share sent back for changes, share that met its response target. |
+| **Value of this setup** | Human minutes per request with Atrium versus by hand, and the hours and cost that frees each month. Uses this run's real mix of requests and interventions, plus four assumptions you can edit. |
 | **Where the time goes** | For each step, the average time a request waited before work started versus the time spent working. Hover for exact figures, or switch to a table. |
 | **Right now** | Each agent's tray size and how busy it has been. |
 | **Your oversight** | Approvals, send-backs, holds, reassignments and cancellations. |
+| **Export** | Every request as one CSV row: times, priority, target met or missed, rework rounds, human actions. |
+
+### Response-time targets
+
+| Priority | Target in a real desk | In the simulation |
+|---|---|---|
+| Urgent (P1) | 1 hour | 60 seconds |
+| Normal (P2) | 4 hours | 4 minutes |
+| Low (P3) | 8 hours | 8 minutes |
+
+The demo runs about 60 times faster than a real desk, so one simulated second stands for about one minute. A request is "at risk" in the last quarter of its target. Agents take the earliest deadline first, which puts urgent work ahead without letting old low-priority work wait forever. If a request passes its target while open, that is logged once as an event.
+
+### Value estimate
+
+Defaults: 25 minutes for a request done by hand, 4 minutes each time a person steps in, $45 an hour, 40 requests a day, 21 working days a month. All four can be changed in the app and are remembered in the browser. The figure is an estimate from those assumptions and the run, and the app says so next to it.
 
 Try "Simulate a busy morning": the dashboard shows the queue build at Iris's desk first, then moves on to whichever desk is the bottleneck.
 
-![The dashboard after a busy morning](docs/dashboard.png)
+![The dashboard after a busy morning, with the value panel open](docs/dashboard.png)
 
 ## Live AI mode
 
@@ -177,6 +199,10 @@ A model can never skip review, approve its own work or change who owns a task. T
 | Supervisor controls: approve, request changes, hold, resume, reassign, cancel, approval rule | **Working** | Each one changes the run |
 | Activity log, per-request outputs and handoff trail | **Working** | Generated by the engine as events happen |
 | Dashboard figures and recommendation | **Working** | Computed from the run, unit-tested |
+| Response-time targets, countdowns and breach events | **Working** | Targets are compressed (see above) |
+| Value estimate | **Working, estimate** | Calculated from the run and editable assumptions, not measured savings |
+| Audit export (JSON, CSV) | **Working** | Times are simulated seconds |
+| Adaptive graphics | **Working** | Auto, Full or Light |
 | Guided tour | **Working** | Driven by real workflow events |
 | Saved state across reloads | **Working** | Browser storage only |
 | Live model-backed agents | **Optional, working** | Needs your own Claude API key. Off by default. Tested against a mocked API (see above) |
@@ -186,7 +212,7 @@ A model can never skip review, approve its own work or change who owns a task. T
 | IT systems (directory, firewall, mail, device management) | **Simulated** | Never connected, in either mode. Names like FW-2291 are invented |
 | Real tool access through a permission gateway | **Proposed** | See [production design](#how-this-becomes-a-production-system) |
 | Server-side orchestration, shared multi-user view | **Proposed** | |
-| Durable database, audit export, SLA alerts, ticketing integration | **Proposed** | |
+| Durable database, ticketing integration, SLA notifications by email or chat | **Proposed** | |
 
 The same table is in the app (top bar badge, then "What's real?"). Every agent profile notes that its tool access is simulated, and every output says whether a script or a model wrote it.
 
@@ -229,14 +255,16 @@ flowchart LR
 | `src/sim/types.ts` | The data model: `Task`, `AgentState`, `Handoff`, `Output`, `StageSpan`, `AIStageResult`, `SimEvent`, `SimState`. Everything is plain JSON. |
 | `src/sim/engine.ts` | The orchestrator. Advances time, lets each agent pick up, work on and hand off tasks, applies supervisor commands, enforces the rules a model may not override, records stage timings, steers walking agents around each other, writes the event log. |
 | `src/sim/data.ts` | Agent profiles and the scripted steps and outputs for each scenario. |
-| `src/sim/metrics.ts` | Dashboard figures and the recommendation sentence, computed from engine state. |
+| `src/sim/metrics.ts` | Dashboard figures, the recommendation sentence and the value estimate, computed from engine state. |
+| `src/sim/sla.ts` | Response-time state for a request: on track, at risk, breached, met or missed. |
+| `src/sim/audit.ts` | Builds the JSON and CSV exports, with CSV quoting that guards against spreadsheet formula injection. |
 | `src/sim/layout.ts` | Station positions and the points agents walk between. |
 | `src/ai/prompts.ts` | Builds one agent's request for one step: role, limits, the work so far, and a typed tool schema. |
 | `src/ai/anthropic.ts` | Calls the Messages API from the browser, validates the answer, and turns failures into a clear error so the engine can fall back. |
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
-| `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. |
+| `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 28 unit tests across the engine, the live AI rules, prompt building, response parsing and the dashboard figures. |
+| `*.test.ts` | 40 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate and the exports. |
 
 ### Task flow
 
@@ -254,7 +282,7 @@ stateDiagram-v2
   Complete --> [*]: Echo files it
 ```
 
-Within each stage a task is `queued` (in the owner's tray), `active` (being worked on) or `handoff` (being carried). Ownership changes only when the carrier arrives, so a task always has exactly one owner. Agents take urgent work first, then oldest first, and skip anything on hold. Each visit to a step is recorded as a span (arrived, started, finished), which is what the dashboard measures.
+Within each stage a task is `queued` (in the owner's tray), `active` (being worked on) or `handoff` (being carried). Ownership changes only when the carrier arrives, so a task always has exactly one owner. Agents take the earliest response-time deadline first and skip anything on hold. Each visit to a step is recorded as a span (arrived, started, finished), which is what the dashboard measures.
 
 In live AI mode the engine asks for a model result when an agent starts a step, holds the progress bar at 80% until it arrives, then plays the model's own step descriptions in the speech bubble.
 
@@ -325,6 +353,9 @@ flowchart TB
 - **Colours were checked, not picked by eye.** Each agent has one colour, used on its robot, desk, floor marker and name tag. The five were chosen and ordered with a colour-blindness validator so that neighbouring desks stay distinguishable for common colour vision deficiencies. Agents are always named as well, so colour is never the only cue. Request boxes are neutral so they never borrow an agent's colour. Gold means you, red means it needs you.
 - **The model proposes, the engine decides.** Live AI changes who writes the work, not who controls the workflow. That boundary is the main thing I would keep in production.
 - **The tour follows the simulation.** Each step waits for a real event instead of a timer, so it cannot drift out of sync, and it still works if you send the request back instead of approving it.
+- **Earliest deadline first, not strict priority.** Strict priority can leave low-priority work waiting forever on a busy day. Ordering by deadline still puts urgent work first, because its deadline is shortest.
+- **It degrades instead of stuttering.** A reviewer may open the link on a work laptop with basic graphics. The app checks the graphics chip and the frame rate, and drops shadows and resolution rather than playing choppily. The viewer can override it.
+- **Value is shown with its assumptions.** The saving figure sits next to the inputs that produced it, labelled as an estimate, so it can be challenged and adjusted rather than taken on faith.
 - **The dashboard says what to do, not only what happened.** A rule-based sentence names the bottleneck and the action, because a manager glancing at charts wants the conclusion first.
 
 ## Run, test and deploy
@@ -334,7 +365,7 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 28 unit tests
+npm test           # 40 unit tests
 npm run build      # type-check and build to dist/
 npm run preview    # serve the production build locally
 ```
@@ -353,14 +384,16 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 28 tests):
+- **Unit tests** (`npm test`, 40 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
   - *AI layer:* prompts contain only the right role and context, and malformed or out-of-range answers are rejected or ignored.
   - *Dashboard:* autonomy share, the waiting/working split, and that the recommendation names a pile-up and slow approvals.
+  - *Response targets:* on track to at risk to breached, a single breach event, met and missed on completion, earliest-deadline-first ordering, and the recommendation putting an at-risk request first.
+  - *Value and export:* the value arithmetic, no negative savings, the full audit trail, and CSV quoting including formula-like text.
 - **Type checking** runs with TypeScript strict mode as part of every build.
-- **Browser checks** in headless Chrome at 1440×900, 1280×720 and a 390×844 phone: the full tour including the approval step, a busy morning through to the dashboard, chart tooltip and table view, and live AI mode against a mocked Claude API (checking the request headers, model ID, all five stage calls, output labels, and that the key stays in tab-only storage). Screenshots were inspected and the console checked for errors.
+- **Browser checks** in headless Chrome at 1440×900, 1280×720 and a 390×844 phone: the full tour including the approval step, a busy morning through to the dashboard, chart tooltip and table view, and live AI mode against a mocked Claude API (checking the request headers, model ID, all five stage calls, output labels, and that the key stays in tab-only storage). Also: light graphics switching on by itself on a software renderer, the at-risk recommendation during a busy morning, the value figures updating when an assumption changes, and all three downloads opened and checked. Screenshots were inspected and the console checked for errors.
 - **CI** repeats the tests and build on every push before deploying.
 
 ## Limitations
@@ -371,7 +404,8 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 - No real IT systems or tools are connected in either mode.
 - One browser, one user. There is no server, login or shared view.
 - State lives in browser storage. Clearing site data resets the demo.
-- Dashboard times are simulated seconds, compressed from what a real desk would see.
+- Dashboard times and response targets are simulated seconds, compressed about 60 times from a real desk.
+- The value figure is an estimate from assumptions, not measured savings.
 - Needs WebGL. Without it the panels still work but the 3D office does not appear.
 - Agents steer around each other, but in a very crowded moment two can briefly overlap.
 - No screen-reader description of the 3D scene itself. The same information is available in the panels, which use standard buttons, lists and tables.

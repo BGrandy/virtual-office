@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { AGENTS, AGENT_IDS, STAGE_META, actorName } from '../sim/data';
 import type { AgentId, Handoff, Task } from '../sim/types';
 import { actions, sim, useSim, useUI } from '../state/store';
-import { ActorChip, Pipeline, PriorityTag, clock, riskReason, statusText } from './bits';
+import { ActorChip, Pipeline, PriorityTag, SlaChip, clock, riskReason, statusText } from './bits';
+import { taskAudit, taskEventsCsv } from '../sim/audit';
+import { download, stamp } from './download';
 
 export function PolicyControl() {
   const s = useSim();
@@ -23,6 +25,7 @@ function ApprovalCard({ t }: { t: Task }) {
   return (
     <section className="approval">
       <h3>Your decision is needed</h3>
+      <p className="due"><SlaChip task={t} now={sim.state.time} long /></p>
       <p className="why"><strong>Why it stopped:</strong> {(riskReason(t) ?? 'Flagged for approval').replace(/\.$/, '')}.</p>
       {review && <pre className="quote">{review.body}</pre>}
       <label htmlFor="note">Note for the team (optional)</label>
@@ -56,7 +59,7 @@ function TaskInspector({ t }: { t: Task }) {
       <header className="insp-head">
         <div className="row between">
           <span className="task-id big">{t.id}</span>
-          <PriorityTag p={t.priority} />
+          <span className="row-tags"><SlaChip task={t} now={sim.state.time} /><PriorityTag p={t.priority} /></span>
         </div>
         <h2>{t.title}</h2>
         <p className="meta">From {t.requester}, received at {clock(t.createdAt)}</p>
@@ -128,6 +131,15 @@ function TaskInspector({ t }: { t: Task }) {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="audit">
+        <h3>Audit record</h3>
+        <p className="meta">Everything above, plus every logged event, as a file.</p>
+        <div className="row wrap">
+          <button className="btn ghost" onClick={() => download(`${t.id}-history-${stamp()}.json`, JSON.stringify(taskAudit(sim.state, t, new Date().toISOString()), null, 2), 'application/json')}>Download JSON</button>
+          <button className="btn ghost" onClick={() => download(`${t.id}-events-${stamp()}.csv`, taskEventsCsv(sim.state, t), 'text/csv')}>Download CSV</button>
+        </div>
       </section>
     </>
   );

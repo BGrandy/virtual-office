@@ -1,4 +1,5 @@
-import { AGENTS, PIPELINE, STAGE_META, actorName, getTemplate } from '../sim/data';
+import { AGENTS, PIPELINE, SLA_REAL, STAGE_META, actorName, getTemplate } from '../sim/data';
+import { slaInfo } from '../sim/sla';
 import type { Actor, AgentId, Stage, Task } from '../sim/types';
 import { sim } from '../state/store';
 
@@ -9,6 +10,7 @@ export const clock = (t: number) => {
 
 /** A length of time, e.g. "49s" or "2m 10s". */
 export const duration = (n: number) => {
+  if (n > 0 && n < 1) return 'under 1s';
   const s = Math.floor(n);
   return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
 };
@@ -65,3 +67,20 @@ export const PriorityTag = ({ p }: { p: Task['priority'] }) => (
 );
 
 export const riskReason = (t: Task) => t.riskReason ?? getTemplate(t.templateId).riskReason ?? (sim.state.policy === 'all' ? 'Your approval rule sends every task to you' : undefined);
+
+/** Countdown to the response-time target, or whether it was met. */
+export function SlaChip({ task, now, long }: { task: Task; now: number; long?: boolean }) {
+  const sla = slaInfo(task, now);
+  if (!sla) return null;
+  const left = Math.abs(sla.remaining);
+  const text =
+    sla.state === 'met' ? 'Met target'
+    : sla.state === 'missed' ? `Missed by ${duration(left)}`
+    : sla.state === 'breached' ? `Late by ${duration(left)}`
+    : `Due in ${duration(sla.remaining)}`;
+  return (
+    <span className={`sla sla-${sla.state}`} title={`Response target: ${SLA_REAL[task.priority]} in a real desk (${duration(sla.target)} in this simulation)`}>
+      {text}{long && ` (target ${SLA_REAL[task.priority]})`}
+    </span>
+  );
+}

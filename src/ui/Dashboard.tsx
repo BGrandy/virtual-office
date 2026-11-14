@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { AGENTS } from '../sim/data';
-import { computeMetrics, type StageStat } from '../sim/metrics';
-import { useSim, useUI } from '../state/store';
+import { DEFAULT_VALUE, computeMetrics, valueEstimate, type StageStat, type ValueAssumptions } from '../sim/metrics';
+import { allRequestsCsv } from '../sim/audit';
+import { download, stamp } from './download';
+import { actions, sim, useSim, useUI } from '../state/store';
 import { duration } from './bits';
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -62,6 +64,68 @@ function StageChart({ stages, onTip }: { stages: StageStat[]; onTip: (t: Tip | n
   );
 }
 
+const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
+const hours = (n: number) => `${n >= 10 ? Math.round(n).toLocaleString() : n.toFixed(1)} h`;
+
+const FIELDS: { key: keyof ValueAssumptions; label: string; unit: string; min: number; max: number; step: number }[] = [
+  { key: 'manualMinutes', label: 'A request done fully by hand', unit: 'min', min: 1, max: 600, step: 1 },
+  { key: 'touchMinutes', label: 'Each time a person steps in', unit: 'min', min: 0, max: 120, step: 1 },
+  { key: 'hourlyCost', label: 'Cost of an hour of IT staff time', unit: '$', min: 0, max: 500, step: 1 },
+  { key: 'requestsPerDay', label: 'Requests per working day', unit: '', min: 1, max: 5000, step: 1 },
+];
+
+/** Turns the run into time and money saved, from assumptions the viewer can change. */
+function ValuePanel() {
+  const s = useSim();
+  const a = useUI((st) => st.value);
+  const v = valueEstimate(s, a);
+  const changed = (Object.keys(DEFAULT_VALUE) as (keyof ValueAssumptions)[]).some((k) => a[k] !== DEFAULT_VALUE[k]);
+  return (
+    <section className="value">
+      <h2>Value of this setup</h2>
+      {v ? (
+        <>
+          <p className="value-lead">
+            A person spends about <strong>{v.humanMinutesPerRequest.toFixed(1)} min</strong> per request instead of <strong>{a.manualMinutes} min</strong>.
+            At {a.requestsPerDay} requests a day that frees about <strong>{hours(v.monthlyHours)}</strong> a month, worth roughly <strong>{money(v.monthlyCost)}</strong>.
+          </p>
+          <p className="hint">So far this run: {v.completed} requests, {v.touches} times you stepped in, {hours(v.savedHoursRun)} saved.</p>
+        </>
+      ) : (
+        <p className="empty">Complete a request to see the estimate.</p>
+      )}
+      <details className="assumptions">
+        <summary>Assumptions{changed && ' (changed)'}</summary>
+        <div className="fields">
+          {FIELDS.map((f) => (
+            <label key={f.key}>
+              <span>{f.label}</span>
+              <span className="field">
+                {f.unit === '$' && <i>$</i>}
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={f.min}
+                  max={f.max}
+                  step={f.step}
+                  value={a[f.key]}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    if (Number.isFinite(n)) actions.setValue({ [f.key]: Math.min(f.max, Math.max(f.min, n)) });
+                  }}
+                />
+                {f.unit && f.unit !== '$' && <i>{f.unit}</i>}
+              </span>
+            </label>
+          ))}
+        </div>
+        {changed && <button className="text-btn" onClick={actions.resetValue}>Restore defaults</button>}
+      </details>
+      <p className="footnote">An estimate from these assumptions and this run's mix of requests, not a measurement. Model costs are not included; they are a fraction of a cent per request with Claude Haiku 5.5.</p>
+    </section>
+  );
+}
+
 export function Dashboard() {
   const s = useSim();
   const select = useUI((st) => st.select);
@@ -82,7 +146,10 @@ export function Dashboard() {
         <Tile label="Average time to close" value={m.completed ? secs(m.avgCycle) : 'n/a'} />
         <Tile label="Closed without you" value={m.completed ? pct(m.autonomy) : 'n/a'} sub="No approval or other action needed" />
         <Tile label="Sent back for changes" value={m.reworkRate ? pct(m.reworkRate) : '0%'} sub="Of requests that reached review" />
+        <Tile label="Met response target" value={m.completed ? pct(m.slaMet) : 'n/a'} sub={m.slaAlerts.length ? `${m.slaAlerts.length} open ${m.slaAlerts.length === 1 ? 'request' : 'requests'} at risk or late` : 'Nothing open is at risk'} />
       </section>
+
+      <ValuePanel />
 
       <section>
         <div className="row between">
@@ -146,6 +213,11 @@ export function Dashboard() {
           <div><dt>Reassigned</dt><dd>{m.human.reassigns}</dd></div>
           <div><dt>Cancelled</dt><dd>{m.human.cancels}</dd></div>
         </dl>
+      </section>
+
+      <section>
+        <h2>Export</h2>
+        <button className="btn ghost" disabled={!m.created} onClick={() => download(`atrium-requests-${stamp()}.csv`, allRequestsCsv(sim.state), 'text/csv')}>Download all requests (CSV)</button>
       </section>
 
       <p className="footnote">Times are simulated seconds. A real desk would measure minutes or hours, but the shape of the problem is the same.</p>

@@ -9,11 +9,16 @@ import { create } from 'zustand';
 import { errorMessage, modelLabel, runStage, testConnection } from '../ai/anthropic';
 import { BUSY_MORNING } from '../sim/data';
 import { Simulation } from '../sim/engine';
+import { DEFAULT_VALUE, type ValueAssumptions } from '../sim/metrics';
 import type { AgentId, ApprovalPolicy, SimState, Task, WorkStage } from '../sim/types';
 
 const KEY = 'atrium.sim.v5';
 const SEEN_KEY = 'atrium.seen-welcome';
 const AI_KEY = 'atrium.ai';
+const VALUE_KEY = 'atrium.value';
+const QUALITY_KEY = 'atrium.quality';
+
+export type Quality = 'auto' | 'full' | 'light';
 
 const store = {
   get(k: string, session = false) {
@@ -102,6 +107,10 @@ interface UIState {
   tour: { step: number; taskId?: string; prevSpeed: number } | null;
   ai: AISettings;
   aiError?: string;
+  value: ValueAssumptions;
+  /** Graphics setting chosen by the viewer, and whether auto mode has dropped to light. */
+  quality: Quality;
+  autoLight: boolean;
   select: (s: Selection, follow?: boolean) => void;
   setFollow: (f: boolean) => void;
   setTab: (t: LeftTab) => void;
@@ -123,6 +132,12 @@ export const useUI = create<UIState>((set) => ({
   leftOpen: !isNarrow(),
   tour: null,
   ai: loadAI(),
+  value: (() => { try { return { ...DEFAULT_VALUE, ...JSON.parse(store.get(VALUE_KEY) ?? '{}') }; } catch { return DEFAULT_VALUE; } })(),
+  quality: (() => {
+    const q = new URLSearchParams(typeof location !== 'undefined' ? location.search : '').get('quality') ?? store.get(QUALITY_KEY);
+    return q === 'full' || q === 'light' ? q : 'auto';
+  })(),
+  autoLight: false,
   // On a phone the two panels share the bottom of the screen, so opening details closes the list.
   select: (selected, follow) => set((s) => ({ selected, follow: selected ? follow ?? s.follow : false, ...(selected && isNarrow() ? { leftOpen: false } : {}) })),
   setFollow: (follow) => set({ follow }),
@@ -183,6 +198,20 @@ export const actions = {
     const t = useUI.getState().tour;
     if (t) actions.setSpeed(t.prevSpeed);
     useUI.setState((s) => ({ tour: null, focus: null, cameraReset: s.cameraReset + 1 }));
+  },
+
+  setValue: (patch: Partial<ValueAssumptions>) => {
+    const value = { ...useUI.getState().value, ...patch };
+    store.set(VALUE_KEY, JSON.stringify(value));
+    useUI.setState({ value });
+  },
+  resetValue: () => {
+    store.set(VALUE_KEY, null);
+    useUI.setState({ value: DEFAULT_VALUE });
+  },
+  setQuality: (quality: Quality) => {
+    store.set(QUALITY_KEY, quality === 'auto' ? null : quality);
+    useUI.setState({ quality, autoLight: false });
   },
 
   // Live AI
