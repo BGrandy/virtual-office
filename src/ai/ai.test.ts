@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../sim/engine';
-import { parseStage } from './anthropic';
+import { clip, parseStage } from './anthropic';
 import { buildStageRequest } from './prompts';
 
 const tool = (input: Record<string, unknown>) => ({ content: [{ type: 'tool_use', input }] });
@@ -75,5 +75,24 @@ describe('closing approved work', () => {
     const r = buildStageRequest(t, 'delivery');
     expect(r.user).toMatch(/The supervisor approved this work/);
     expect(r.system).toMatch(/Do not invent surnames/);
+  });
+});
+
+describe('keeping work moving', () => {
+  it('tells the planner, technician and reviewer not to stall on missing information', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('custom', 'Set up new hire Maya Chen for Monday', 'ai');
+    expect(buildStageRequest(t, 'planning').user).toMatch(/Every step must be doable now/);
+    expect(buildStageRequest(t, 'execution').user).toMatch(/Carry out every step of the plan in this one pass/);
+    const review = buildStageRequest(t, 'review').user;
+    expect(review).toMatch(/only needs information from the requester is not a reason to fail or escalate/);
+  });
+
+  it('trims long outputs at a line break, never mid-word', () => {
+    const long = Array.from({ length: 80 }, (_, i) => `Line ${i}: the account was updated successfully.`).join('\n');
+    const out = clip(long, 500);
+    expect(out.length).toBeLessThanOrEqual(502);
+    expect(out.endsWith('successfully. …') || out.endsWith('successfully.\n …') || /successfully\. …$/.test(out)).toBe(true);
+    expect(clip('short', 500)).toBe('short');
   });
 });

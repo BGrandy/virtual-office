@@ -92,6 +92,14 @@ export async function runStage(conn: Conn, task: Task, stage: WorkStage, onUsage
   return parseStage(data, stage, conn.model);
 }
 
+/** Shortens over-long text at the end of a line (or sentence), never mid-word. */
+export function clip(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const at = Math.max(cut.lastIndexOf('\n'), cut.lastIndexOf('. ') + 1);
+  return (at > max * 0.5 ? cut.slice(0, at) : cut.slice(0, cut.lastIndexOf(' '))).trimEnd() + ' …';
+}
+
 /** Validates the model's answer. Anything malformed becomes an error, and the engine falls back to the script. */
 export function parseStage(data: { content?: { type: string; input?: Record<string, unknown>; text?: string }[] }, stage: WorkStage, model: string): AIStageResult {
   const call = data.content?.find((c) => c.type === 'tool_use');
@@ -108,7 +116,7 @@ export function parseStage(data: { content?: { type: string; input?: Record<stri
     .filter((x): x is string => typeof x === 'string' && !!x.trim())
     .map((x) => x.trim().replace(/[.…]+$/, '').slice(0, 60))
     .slice(0, 4);
-  const r: AIStageResult = { status: 'done', steps: steps.length ? steps : ['Working on it'], body: input.body.trim().slice(0, 1500), model: modelLabel(model) };
+  const r: AIStageResult = { status: 'done', steps: steps.length ? steps : ['Working on it'], body: clip(input.body.trim(), 2000), model: modelLabel(model) };
 
   if (stage === 'triage' && ['P1', 'P2', 'P3'].includes(input.priority as string)) r.priority = input.priority as Priority;
   if (stage === 'planning') {

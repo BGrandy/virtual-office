@@ -32,14 +32,16 @@ const INSTRUCTIONS: Record<WorkStage, string> = {
     'P2 for normal work, including outages with a workaround, such as one printer down when others are available. P3 if one person is affected and can carry on. ' +
     'In body, write 3 to 5 short lines in the form "Label: value" covering type, priority with a reason, who is affected, and an "Assumed:" line for any detail the requester left out (pick something sensible).',
   planning:
-    'Write a numbered plan of 3 to 6 concrete steps in body, one per line. ' +
+    'Write a numbered plan of 3 to 6 concrete steps in body, one per line. Every step must be doable now: where information is missing (a role title, a device name), use the standard default and note it as an assumption rather than making a step wait for someone. ' +
     'Set risky to true if any step changes production infrastructure, grants admin or elevated access, deletes data, or affects many users at once, and give a one-line risk_reason. Otherwise set risky to false.',
   execution:
-    'Carry out the plan. In body, write a change log: one line per action and its result. ' +
-    'If the plan marked a step as risky, stage it ("staged, not applied") instead of applying it.',
+    'Carry out every step of the plan in this one pass, including scheduling and notifications; no step belongs to a later stage. In body, write a change log: one line per action and its result. ' +
+    'Where information is missing, apply the standard default and note it. If the plan marked a step as risky, stage it ("staged, not applied") instead of applying it.',
   review:
     'Check the change log against the plan and normal IT security policy. Set verdict to "pass" if the work is complete and safe, ' +
-    '"changes" if something specific is missing or wrong (say exactly what to fix), or "escalate" if a person must decide. ' +
+    '"changes" only if the technician got something wrong or skipped something they could do right now (say exactly what to fix), ' +
+    'or "escalate" only for a risk decision a person must make, such as a security concern or a policy exception. ' +
+    'A gap that only needs information from the requester is not a reason to fail or escalate: pass it and note the follow-up. ' +
     'In body, write 2 to 5 lines of findings.',
   delivery:
     'Write the reply to the requester in body: 2 to 4 friendly, plain-language sentences saying what was done, based on the change log, and anything they need to do. ' +
@@ -64,7 +66,7 @@ export function buildStageRequest(task: Task, stage: WorkStage): StageRequest {
     'When a detail is missing (a device name, a count, an error message), do not stop to ask for it: assume something sensible, say so in one short line, and carry on. Use earlier agents\' assumptions where they exist. Never include real personal data.',
     'Unless the request is genuinely unsafe or impossible, the simulated work succeeds, so the story ends with the problem solved.',
     'Use only the names given in the request. Do not invent surnames, people, approvals or sign-offs that are not recorded in the work so far.',
-    'Write plainly in short lines. No markdown, no headings, no bold. Always answer by calling the submit tool.',
+    'Write plainly in short lines, and keep body under 120 words. No markdown, no headings, no bold. Always answer by calling the submit tool.',
   ].join('\n');
 
   const history = task.outputs
