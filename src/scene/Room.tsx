@@ -111,36 +111,51 @@ function useWhiteboardTexture() {
       ctx.fillText('How a request moves', 40, 70);
       const steps = ['Request', 'Plan', 'Execute', 'Review', 'Approve', 'Complete'];
       const colors = ['#2A78D6', '#EB6834', '#1BAF7A', '#6250D6', '#D93A3F', '#E87BA4'];
+      // One row, left to right, so the order can only be read one way.
+      const gap = 138;
+      const x0 = 85;
+      const y = 210;
       steps.forEach((s, i) => {
-        const col = i % 3;
-        const row = Math.floor(i / 3);
-        const x = 110 + col * 270;
-        const y = 170 + row * 150;
+        const x = x0 + i * gap;
+        const optional = i === 4;
         ctx.strokeStyle = colors[i];
         ctx.lineWidth = 7;
+        ctx.setLineDash(optional ? [12, 9] : []);
         ctx.beginPath();
         ctx.arc(x, y, 40, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.setLineDash([]);
         ctx.fillStyle = colors[i];
         ctx.font = '700 40px "Bricolage Grotesque Variable", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(String(i + 1), x, y + 14);
         ctx.fillStyle = INK;
-        ctx.font = '600 30px "Instrument Sans Variable", sans-serif';
+        ctx.font = '600 27px "Instrument Sans Variable", sans-serif';
         ctx.fillText(s, x, y + 82);
-        if (col < 2) {
+        if (i < steps.length - 1) {
           ctx.strokeStyle = '#7A889C';
           ctx.lineWidth = 4;
           ctx.beginPath();
-          ctx.moveTo(x + 60, y);
-          ctx.lineTo(x + 200, y);
-          ctx.lineTo(x + 186, y - 10);
-          ctx.moveTo(x + 200, y);
-          ctx.lineTo(x + 186, y + 10);
+          ctx.moveTo(x + 50, y);
+          ctx.lineTo(x + gap - 50, y);
+          ctx.lineTo(x + gap - 62, y - 9);
+          ctx.moveTo(x + gap - 50, y);
+          ctx.lineTo(x + gap - 62, y + 9);
           ctx.stroke();
         }
-        ctx.textAlign = 'left';
       });
+      // Step 5 is the only one that doesn't always happen.
+      const ax = x0 + 4 * gap;
+      ctx.strokeStyle = '#D93A3F';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(ax, y + 100);
+      ctx.lineTo(ax, y + 132);
+      ctx.stroke();
+      ctx.fillStyle = '#D93A3F';
+      ctx.font = '600 27px "Instrument Sans Variable", sans-serif';
+      ctx.fillText('Risky work only: a person decides', ax - 60, y + 166);
+      ctx.textAlign = 'left';
     },
     860, 440, 'whiteboard',
   );
