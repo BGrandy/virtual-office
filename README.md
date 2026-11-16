@@ -65,6 +65,8 @@ Separating the technician from the reviewer is deliberate. It is the same contro
 
 Agents also ask each other questions. Partway through a step, the owner can walk over to a colleague's desk with a question: the technician checks a detail of the plan with the planner, or the planner asks the reviewer what policy allows before writing the plan. The request stays with the one asking, the answer is shown as a conversation over both robots, and the exchange is kept in the request's history and audit export. This is the difference between a relay, where each agent only passes work on, and a team.
 
+![Bolt has walked over to ask Atlas a question; Atlas's answer shows over Atlas, and the request's panel says "Bolt is asking Atlas a question"](docs/consult.png)
+
 ## How a real team would use it
 
 **Morning.** The IT lead opens Atrium on a second monitor. Overnight requests are already moving. Routine ones, such as account lockouts, have been closed by the agents without anyone touching them. The lead sees one box glowing on the supervisor console: a new-hire setup that includes an admin licence.
@@ -113,6 +115,8 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Start over | "Simulated demo" badge, then "Reset demo". |
 
 Progress is saved in the browser, so a reload continues where you left off. The office keeps running in a background tab. On a phone, the panels open as sheets from the bottom so the office stays visible above them.
+
+![The assessment checklist: every requirement of the brief, with the Interaction requirement open to show how it is met and buttons that show it in the app](docs/checklist.png)
 
 ### The four scenarios
 
