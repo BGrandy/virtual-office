@@ -207,6 +207,7 @@ export function LeftPanel() {
 /** Navigation help, replaced for a few seconds when graphics drop to light mode. */
 function NavHint() {
   const autoLight = useUI((st) => st.autoLight);
+  const hasSelection = useUI((st) => st.selected !== null);
   const [shownAt, setShownAt] = useState<number | null>(null);
   const [, force] = useState(0);
   useEffect(() => {
@@ -223,7 +224,9 @@ function NavHint() {
       </div>
     );
   }
-  return <div className="nav-hint" aria-hidden="true">Drag to look around. Scroll to zoom. Right-drag to move. Click an agent or a box.</div>;
+  // Once something is selected the details panel is open and the hint has done its job.
+  if (hasSelection) return null;
+  return <div className="nav-hint" aria-hidden="true">Drag to look around. Scroll to zoom. Right-drag to move. Click an agent to see what they’re doing, or any box to open that request. Each box is one request.</div>;
 }
 
 /** Bottom nudge: tells the supervisor when something is blocked on them. */

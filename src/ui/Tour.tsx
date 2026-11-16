@@ -21,7 +21,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     title: 'This is the service desk',
-    body: () => 'Five AI agents each own one step. Work moves left to right around the room, and the numbers on the floor match the progress bar on every request. You sit at the red console.',
+    body: () => 'Five AI agents each own one step. Work moves left to right around the room, and the numbers on the floor match the progress bar on every request. You are the supervisor: the figure labelled “You”, standing in the red circle at step 5.',
     focus: () => 'overview',
   },
   {
