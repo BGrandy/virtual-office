@@ -126,7 +126,7 @@ interface UIState {
   /** Overrides what the camera tracks (used by the tour). */
   focus: CameraFocus | null;
   tab: LeftTab;
-  dialog: 'welcome' | 'about' | 'ai' | null;
+  dialog: 'welcome' | 'about' | 'ai' | 'checklist' | null;
   cameraReset: number;
   leftOpen: boolean;
   tour: { step: number; taskId?: string; prevSpeed: number } | null;
@@ -154,7 +154,7 @@ export const useUI = create<UIState>((set) => ({
   follow: false,
   focus: null,
   tab: 'tasks',
-  dialog: store.get(SEEN_KEY) === '1' && sim.state.tasks.length > 0 ? null : 'welcome',
+  dialog: typeof location !== 'undefined' && new URLSearchParams(location.search).has('checklist') ? 'checklist' : store.get(SEEN_KEY) === '1' && sim.state.tasks.length > 0 ? null : 'welcome',
   cameraReset: 0,
   leftOpen: !isNarrow(),
   tour: null,

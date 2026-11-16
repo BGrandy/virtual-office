@@ -91,6 +91,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Look around | Mouse: drag to orbit, scroll to zoom, right-drag to move. Touch: drag to orbit, pinch to zoom, two-finger drag to move. The on-screen hint shows whichever applies. "Reset view" returns to the overview. |
 | Learn it in two minutes | Welcome screen, "Take the tour". Reopen it any time from "Guide". |
 | Start a request | Left panel, "Start a request". Pick one of four scenarios or type your own. |
+| Check it against the brief | "Checklist" in the top bar lists each requirement of the assessment brief. Select one to see how it is met, with a button that shows it in the app or opens the matching README section. Direct link: add `?checklist` to the URL. |
 | Load the office | "Simulate a busy morning" sends eight mixed requests at once. Waiting work stacks into towers on the desks, and finished work builds the gold pyramid in the middle of the room. |
 | See who an agent is | Click the agent or its name tag. The right panel shows its role, current work, tray, permitted systems and recent activity. |
 | Follow a request | Click its box in the office or its row in the left panel. The right panel shows the pipeline, current owner, everything produced so far and the handoff trail. "Follow in office" makes the camera track the box. |
@@ -189,7 +190,7 @@ A model can never skip review, approve its own work or change who owns a task. T
 
 **Spending limit.** Live mode has a hard cap on this device: $0.10, $0.25 (default) or $1.00. Every call's real token use (from the API response) is priced at the published rates and added up. Before each call, the app checks that even a worst-case call (largest possible prompt, full 900-token answer) cannot take the total past the limit; if it could, the call is not made, live AI switches itself off, and that step uses its script, labelled with the reason. The counter survives reloads and new tabs and can be reset. At most three calls run at once, and "Simulate a busy morning" asks before sending eight requests in live mode. With Haiku, one request costs roughly a fifth of a cent, so the default limit covers well over a hundred requests. This is an estimate; the Console's billing page is the real record, and a spend limit there is the account-level backstop.
 
-**Honest scope.** I tested this path end to end against a mocked API that returns realistic tool calls. The request format, headers, model ID and response parsing are all checked, but a reviewer with a real key is the first live run.
+**Honest scope.** The automated checks run this path end to end against a mocked API that returns realistic tool calls, covering the request format, headers, model ID and response parsing. I also ran it by hand with a real key on routine, risky and fraudulent requests, and fixed what those runs exposed (for example, time spent waiting on the model no longer counts against the response target).
 
 ![A request worked by a live model](docs/live-ai.png)
 
@@ -209,7 +210,7 @@ A model can never skip review, approve its own work or change who owns a task. T
 | Rule-based risk check for typed requests | **Working** | Keyword rules in `src/sim/risk.ts`; runs with or without a model |
 | Guided tour | **Working** | Driven by real workflow events |
 | Saved state across reloads | **Working** | Browser storage only |
-| Live model-backed agents | **Optional, working** | Needs your own Claude API key. Off by default. Tested against a mocked API (see above) |
+| Live model-backed agents | **Optional, working** | Needs your own Claude API key. Off by default. Automated checks use a mocked API; also run by hand with a real key (see above) |
 | Agent outputs without a key | **Simulated** | Scripted per scenario in `src/sim/data.ts`, labelled "Scripted" in the app |
 | Typed custom requests without a key | **Simulated** | Generic placeholder output. The text is only understood in live AI mode |
 | Stage durations | **Simulated** | Fixed timers (5 to 11 seconds per stage at 1x). In live mode, also the model's response time |
@@ -411,7 +412,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 - Without an API key, agents are scripted, and typed requests get generic output (risky ones still stop for approval through the risk rules).
 - The risk rules are keyword-based, so they can miss a risky request worded in an unusual way, or occasionally flag a harmless one. In live mode the model's own judgement sits on top of them.
-- Live AI mode has been tested against a mocked API, not a real key. Model answers vary, so live runs are less predictable than the scripted ones, which is why scripted is the default for a demo.
+- Live AI answers vary from run to run, so live runs are less predictable than the scripted ones, which is why scripted is the default for a demo. The automated checks for live mode use a mocked API; real-key runs were done by hand.
 - Your API key sits in the browser while live mode is on. Fine for a demo with your own key; a production version would keep keys on a server.
 - No real IT systems or tools are connected in either mode.
 - One browser, one user. There is no server, login or shared view.

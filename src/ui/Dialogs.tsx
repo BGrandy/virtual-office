@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MODELS, errorMessage, modelLabel } from '../ai/anthropic';
 import { LIMIT_OPTIONS, callsLeft, dollars, worstCaseCall } from '../ai/budget';
 import { actions, useUI } from '../state/store';
+import { ChecklistBody } from './Checklist';
 
 function Dialog({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -35,7 +36,8 @@ function Welcome({ onClose }: { onClose: () => void }) {
       </ol>
       <p className="disclose">
         Agents follow scripted scenarios by default, and no real IT system is ever touched. You can connect your own Claude API key to have a real model do the thinking.{' '}
-        <button className="inline-link" onClick={() => useUI.getState().setDialog('about')}>See what is working, simulated and proposed.</button>
+        <button className="inline-link" onClick={() => useUI.getState().setDialog('about')}>See what is working, simulated and proposed.</button>{' '}
+        <button className="inline-link" onClick={() => useUI.getState().setDialog('checklist')}>See how it meets the assessment brief.</button>
       </p>
       <div className="row end">
         <button className="btn ghost" onClick={onClose}>Explore on my own</button>
@@ -206,5 +208,6 @@ export function Dialogs() {
   if (dialog === 'welcome') return <Welcome onClose={close} />;
   if (dialog === 'about') return <About onClose={close} />;
   if (dialog === 'ai') return <AIDialog onClose={close} />;
+  if (dialog === 'checklist') return <Dialog title="Assessment checklist" onClose={close} wide><ChecklistBody /></Dialog>;
   return null;
 }

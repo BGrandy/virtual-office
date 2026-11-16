@@ -51,6 +51,7 @@ export function TopBar() {
       </div>
       {!ai.enabled && <button className="btn ghost hide-narrow" onClick={() => setDialog('ai')}>Connect AI</button>}
       <button className="btn ghost hide-narrow" onClick={resetCamera}>Reset view</button>
+      <button className="btn ghost hide-narrow ck-btn" onClick={() => setDialog('checklist')}>Checklist</button>
       <button className="btn ghost" onClick={() => setDialog('welcome')} aria-label="Guide"><span className="hide-xs">Guide</span><span className="only-xs" aria-hidden="true">?</span></button>
     </header>
   );
