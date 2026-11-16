@@ -84,7 +84,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 'o-flow',
         ask: 'Show how tasks are assigned, executed, handed off, reviewed and completed',
         status: 'Met',
-        how: 'A request arrives at the mail slot and is assigned to the first agent. Each agent does its step, then carries the request as a box to the next desk. Partway through, an agent may walk over to ask a colleague a question, and the answer is kept in the request\'s history. The reviewer checks the work and can send it back once. Finished requests join the gold pile in the middle of the room.',
+        how: 'A request arrives at the inbox and is assigned to the first agent. Each agent does its step, then carries the request as a box to the next desk. Partway through, an agent may walk over to ask a colleague a question, and the answer is kept in the request\'s history. The reviewer checks the work and can send it back once. Finished requests join the gold pile in the middle of the room.',
         see: [
           { label: 'Send a request and follow it', run: followOneRequest },
           { label: 'Take the two-minute tour', run: tour },

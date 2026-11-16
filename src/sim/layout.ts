@@ -71,7 +71,7 @@ export const ROOM_CENTRE: Vec2 = [0, -0.4];
 const PYRAMID_REACH = 3.0;
 
 /**
- * The mail slot has nobody standing behind it, so it faces the default camera
+ * The inbox has nobody standing behind it, so it faces the default camera
  * instead of the middle of the room. That way you can see requests arrive.
  */
 const VIEWER: Vec2 = [0, 19];

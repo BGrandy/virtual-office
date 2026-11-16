@@ -126,97 +126,123 @@ function Desk({ id, n }: { id: AgentId; n: number }) {
   );
 }
 
+/**
+ * Where requests enter the office: a counter with a letter tray, under a screen
+ * that says "Inbox". A letter drops into the tray each time a request arrives.
+ */
 function Inbox() {
   const st = station('inbox');
-  const glow = useRef<Mesh>(null!);
-  const sign = useRef<Group>(null!);
+  const screen = useRef<Group>(null!);
+  const frame = useRef<Mesh>(null!);
+  const letter = useRef<Group>(null!);
   const seen = useRef({ count: sim.state.tasks.length, flash: 0 });
-  // A sign on top says what this is: an envelope and the word "Inbox".
   const tex = useCanvasTexture(
     (ctx, w, h) => {
-      ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.roundRect(4, 4, w - 8, h - 8, 28);
-      ctx.fill();
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = INK;
-      ctx.stroke();
+      ctx.fillRect(0, 0, w, h);
       // envelope
-      const ex = 44, ey = 42, ew = 132, eh = 92;
-      ctx.lineWidth = 9;
+      const ex = 56, ey = 70, ew = 200, eh = 140;
+      ctx.lineWidth = 12;
       ctx.lineJoin = 'round';
+      ctx.strokeStyle = INK;
       ctx.fillStyle = '#FFC53D';
       ctx.beginPath();
-      ctx.roundRect(ex, ey, ew, eh, 10);
+      ctx.roundRect(ex, ey, ew, eh, 14);
       ctx.fill();
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(ex + 6, ey + 8);
+      ctx.moveTo(ex + 8, ey + 10);
       ctx.lineTo(ex + ew / 2, ey + eh * 0.58);
-      ctx.lineTo(ex + ew - 6, ey + 8);
+      ctx.lineTo(ex + ew - 8, ey + 10);
       ctx.stroke();
       ctx.fillStyle = INK;
-      ctx.font = '700 96px "Bricolage Grotesque Variable", sans-serif';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Inbox', 206, h / 2 + 6);
+      ctx.textBaseline = 'alphabetic';
+      ctx.font = '700 132px "Bricolage Grotesque Variable", sans-serif';
+      ctx.fillText('Inbox', 296, 178);
+      ctx.fillStyle = 'rgba(20,35,59,0.75)';
+      ctx.font = '600 44px "Instrument Sans Variable", sans-serif';
+      ctx.fillText('Requests arrive here', 300, 244);
     },
-    512, 176, 'inbox-sign',
+    768, 320, 'inbox-screen',
   );
-  useFrame(({ clock }, dt) => {
-    // Flash the slot and nudge the sign each time a new request comes in.
+  useFrame((_, dt) => {
     const m = seen.current;
     const count = sim.state.tasks.length;
     if (count > m.count) m.flash = 1;
     m.count = count;
-    m.flash = Math.max(0, m.flash - dt * 1.4);
-    (glow.current.material as unknown as { opacity: number }).opacity = Math.min(1, 0.35 + Math.sin(clock.elapsedTime * 2) * 0.12 + m.flash * 0.65);
-    sign.current.scale.setScalar(1 + m.flash * 0.12);
+    m.flash = Math.max(0, m.flash - dt * 1.3);
+    // The screen's frame lights up and a letter drops from the screen into the tray.
+    (frame.current.material as unknown as { emissiveIntensity: number }).emissiveIntensity = m.flash * 1.6;
+    screen.current.scale.setScalar(1 + m.flash * 0.06);
+    letter.current.visible = m.flash > 0.02;
+    const fall = 1 - m.flash; // 0 at the screen, 1 in the tray
+    letter.current.position.y = 1.62 - Math.min(1, fall * 1.6) * 0.56;
+    letter.current.rotation.z = (1 - Math.min(1, fall * 1.6)) * 0.5;
   });
-  const envelope = (x: number, z: number, rot: number, key: string) => (
-    <group key={key} position={[x, 0.55, z]} rotation={[0, rot, 0]}>
+  const envelope = (x: number, y: number, z: number, rot: number, key: string) => (
+    <group key={key} position={[x, y, z]} rotation={[0, rot, 0]}>
       <mesh castShadow>
-        <boxGeometry args={[0.46, 0.025, 0.3]} />
+        <boxGeometry args={[0.5, 0.03, 0.33]} />
         <meshStandardMaterial color="#FFFFFF" roughness={0.7} />
       </mesh>
-      {/* the flap */}
-      <mesh position={[0, 0.014, -0.05]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
-        <planeGeometry args={[0.2, 0.2]} />
-        <meshStandardMaterial color="#DDE4EC" roughness={0.7} />
+      <mesh position={[0, 0.017, -0.055]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
+        <planeGeometry args={[0.22, 0.22]} />
+        <meshStandardMaterial color="#D5DDE7" roughness={0.7} />
       </mesh>
     </group>
   );
   return (
     <>
     <StationGroup st={st}>
-      {/* a mail slot: requests arrive here from the outside world */}
-      <RoundedBox args={[1.9, 1.7, 0.5]} radius={0.08} position={[0, 0.85, -0.2]} castShadow receiveShadow>
+      {/* counter */}
+      <RoundedBox args={[1.9, 0.9, 0.95]} radius={0.06} position={[0, 0.45, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={WOOD} roughness={0.6} />
       </RoundedBox>
-      <mesh position={[0, 1.15, 0.055]}>
-        <planeGeometry args={[1.5, 0.5]} />
-        <meshStandardMaterial color={INK} roughness={0.4} />
+      <mesh position={[0, 0.925, 0]} castShadow>
+        <boxGeometry args={[2, 0.05, 1.05]} />
+        <meshStandardMaterial color={INK} roughness={0.5} />
       </mesh>
-      <mesh ref={glow} position={[0, 1.15, 0.06]}>
-        <planeGeometry args={[1.3, 0.34]} />
-        <meshBasicMaterial color="#FFC53D" transparent opacity={0.4} />
+      {/* letter tray */}
+      <group position={[0, 0.95, 0.1]}>
+        <mesh position={[0, 0.02, 0]} castShadow>
+          <boxGeometry args={[1.25, 0.04, 0.72]} />
+          <meshStandardMaterial color="#FFC53D" roughness={0.5} />
+        </mesh>
+        {[-0.625, 0.625].map((x) => (
+          <mesh key={x} position={[x, 0.1, 0]} castShadow>
+            <boxGeometry args={[0.04, 0.2, 0.72]} />
+            <meshStandardMaterial color="#FFC53D" roughness={0.5} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.1, -0.36]} castShadow>
+          <boxGeometry args={[1.29, 0.2, 0.04]} />
+          <meshStandardMaterial color="#FFC53D" roughness={0.5} />
+        </mesh>
+        {envelope(-0.3, 0.06, 0.02, 0.2, 'e1')}
+        {envelope(0.28, 0.06, 0.08, -0.35, 'e2')}
+        {envelope(-0.02, 0.095, -0.02, 0.05, 'e3')}
+      </group>
+      {/* the letter that drops in when a request arrives */}
+      <group ref={letter} position={[0, 1.62, 0.1]} visible={false}>
+        <mesh>
+          <boxGeometry args={[0.5, 0.03, 0.33]} />
+          <meshStandardMaterial color="#FFFFFF" roughness={0.7} />
+        </mesh>
+      </group>
+      {/* screen on a post behind the tray */}
+      <mesh position={[0, 1.4, -0.4]} castShadow>
+        <boxGeometry args={[0.14, 0.95, 0.1]} />
+        <meshStandardMaterial color={INK} roughness={0.5} />
       </mesh>
-      <mesh position={[0, 0.5, 0.25]} castShadow>
-        <boxGeometry args={[1.5, 0.06, 0.7]} />
-        <meshStandardMaterial color={WOOD} />
-      </mesh>
-      {/* a few letters already in the tray */}
-      {envelope(-0.38, 0.3, 0.25, 'e1')}
-      {envelope(0.32, 0.36, -0.4, 'e2')}
-      <group ref={sign} position={[0, 2.16, -0.2]}>
-        <mesh castShadow>
-          <boxGeometry args={[2.2, 0.78, 0.08]} />
-          <meshStandardMaterial color={INK} roughness={0.6} />
+      <group ref={screen} position={[0, 2.25, -0.4]} rotation={[-0.1, 0, 0]}>
+        <mesh ref={frame} castShadow>
+          <boxGeometry args={[2.5, 1.1, 0.1]} />
+          <meshStandardMaterial color={INK} roughness={0.5} emissive="#FFC53D" emissiveIntensity={0} />
         </mesh>
         {tex && (
-          <mesh position={[0, 0, 0.045]}>
-            <planeGeometry args={[2.12, 0.73]} />
-            <meshBasicMaterial map={tex} transparent />
+          <mesh position={[0, 0, 0.056]}>
+            <planeGeometry args={[2.36, 0.98]} />
+            <meshBasicMaterial map={tex} />
           </mesh>
         )}
       </group>

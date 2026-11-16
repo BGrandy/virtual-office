@@ -88,7 +88,7 @@ function NewRequest({ compact }: { compact: boolean }) {
   return (
     <section className="new-req">
       <h2>Start a request</h2>
-      {!compact && <p className="hint">Pick a scenario. It arrives at the mail slot on the left of the office.</p>}
+      {!compact && <p className="hint">Pick a scenario. It arrives at the inbox on the left of the office.</p>}
       <ul className="tpl-list">
         {TEMPLATES.map((tpl) => (
           <li key={tpl.id}>
