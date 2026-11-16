@@ -274,7 +274,7 @@ flowchart LR
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
 | `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `Room.tsx` builds the walls, floor and furniture; `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 65 unit tests across the engine, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
+| `*.test.ts` | 69 unit tests across the engine, consults, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
 
@@ -378,8 +378,9 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 65 unit tests
+npm test           # 69 unit tests
 npm run build      # type-check and build to dist/
+npm run test:browser   # 8 browser tests against dist/ (needs Chrome; set CHROME_PATH if it is not at /usr/bin/google-chrome)
 npm run preview    # serve the production build locally
 ```
 
@@ -391,15 +392,16 @@ npm run preview    # serve the production build locally
 
 1. Create a repository on GitHub and push this project to the `main` branch.
 2. In the repository, open Settings, Pages, and set Source to "GitHub Actions".
-3. The workflow in `.github/workflows/deploy.yml` runs the tests, builds, and publishes. The URL appears on the Actions run and under Settings, Pages.
+3. The workflow in `.github/workflows/deploy.yml` runs the unit tests, builds, runs the browser tests against that build, and publishes only if all of them pass. The URL appears on the Actions run and under Settings, Pages.
 
 The build uses relative paths, so it also works unchanged on Netlify, Vercel or Cloudflare Pages (build command `npm run build`, output folder `dist`).
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 65 tests):
+- **Unit tests** (`npm test`, 69 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
+  - *Consults:* an agent asks a colleague without the request changing hands, the work waits while it is away, question and answer take turns, it asks only once (not again on rework), a hold mid-conversation sends it home, and it waits if the colleague is away from their desk.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
   - *AI layer:* prompts contain only the right role and context, and malformed or out-of-range answers are rejected or ignored.
   - *Risk rules:* the classic risky requests are flagged and routine ones are not (including "everyone's jobs are stuck"), a flagged typed request stops for approval without a model, a live model calling it safe cannot override the rule, and built-in scenarios are untouched.
@@ -409,8 +411,17 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
   - *Value and export:* the value arithmetic, no negative savings, the full audit trail, and CSV quoting including formula-like text.
   - *Box layout:* towers show ten boxes and count the rest, the next request is at the bottom, taller towers sway more, the pyramid never leaves a box floating (checked for several sizes), 500 completed requests stay under 3.2 m tall and on the plinth, and the pyramid is ordered by completion time.
 - **Type checking** runs with TypeScript strict mode as part of every build.
-- **Browser checks** in headless Chrome at 1440×900, 1280×720 and a 390×844 phone: the full tour including the approval step, a busy morning through to the dashboard, chart tooltip and table view, and live AI mode against a mocked Claude API (checking the request headers, model ID, all five stage calls, output labels, and that the key stays in tab-only storage). Also: light graphics switching on by itself on a software renderer, the at-risk recommendation during a busy morning, the value figures updating when an assumption changes, and all three downloads opened and checked. Screenshots were inspected and the console checked for errors.
-- **CI** repeats the tests and build on every push before deploying.
+- **Browser tests** (`npm run test:browser`, 8 tests in `e2e/`). The built site in headless Chrome, using the app the way a person would, with the simulation fast-forwarded:
+  - The guided tour from the first request to the end, including the approval step.
+  - The checklist opened from its direct link, with every requirement having an explanation and a way to see it.
+  - A busy morning cleared with approvals, every agent back at its desk, then the dashboard finding, chart tooltip and table view.
+  - A consult: the question shown over one robot, then the answer over the other, then the exchange in the request's history.
+  - Clearing finished requests while keeping the one in progress.
+  - Live AI mode against a mocked Claude API: all five step calls in order, the request headers, outputs labelled as model-written, the cost line matching the token counts, and the key kept out of saved storage.
+  - The spending limit: no call is made that could pass it, live AI switches itself off, and the steps fall back to the script.
+  - A phone screen: the menu opens the request panel and the checklist fits without sideways scrolling.
+- **Manual checks** in the browser: screenshots inspected at desktop, tablet and phone sizes; light graphics switching on by itself on a software renderer; the value figures updating when an assumption changes; all three downloads opened and checked; and live AI mode run with a real key on routine, risky and fraudulent requests.
+- **CI** runs the type check, unit tests, build and browser tests on every push, and deploys only if all of them pass.
 
 ## Limitations
 
@@ -443,6 +454,7 @@ src/
   state/      engine instance, tick loop, persistence, UI state
   scene/      3D office, agents, task boxes, handoff arcs, camera
   ui/         panels, dashboard, tour, inspector, dialogs, floating labels
+e2e/          browser tests: the built site in headless Chrome, with the Claude API mocked
 docs/         screenshots used in this README
 .github/      test, build and deploy workflow
 ```

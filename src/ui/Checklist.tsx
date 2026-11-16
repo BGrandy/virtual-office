@@ -151,7 +151,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 's-arch',
         ask: 'System architecture, component responsibilities and data/task flow',
         status: 'Met',
-        how: 'Four layers. A workflow engine with no interface code decides everything and is covered by 65 automated tests. A small store runs the engine and saves progress. The 3D scene and the panels only read from it and send commands. The README has the diagram, a table of what each part is responsible for, and the task flow.',
+        how: 'Four layers. A workflow engine with no interface code decides everything and is covered by 69 unit tests, and 8 browser tests check the built site. A small store runs the engine and saves progress. The 3D scene and the panels only read from it and send commands. The README has the diagram, a table of what each part is responsible for, and the task flow.',
         see: [
           { label: 'Read the architecture', href: readme('architecture') },
           { label: 'Component responsibilities', href: readme('component-responsibilities') },
@@ -274,7 +274,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 'c-demo',
         ask: 'Working demo and deployment (15%)',
         status: 'Met',
-        how: 'Everything you can click works, and progress survives a reload. The site is rebuilt and published automatically, and only after the tests pass.',
+        how: 'Everything you can click works, and progress survives a reload. Every push runs the unit tests, builds the site, then runs browser tests against that build in headless Chrome; it is published only if all of them pass.',
         see: [
           { label: 'Send a request and follow it', run: followOneRequest },
           { label: 'See the deploy runs', href: `${REPO}/actions` },
