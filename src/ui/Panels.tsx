@@ -244,8 +244,8 @@ function NavHint() {
   return (
     <div className="nav-hint" aria-hidden="true">
       {touch
-        ? 'Drag to look around. Pinch to zoom. Drag with two fingers to move. Tap an agent to see what they’re doing, or any box to open that request. Each box is one request.'
-        : 'Drag to look around. Scroll to zoom. Right-drag to move. Click an agent to see what they’re doing, or any box to open that request. Each box is one request.'}
+        ? 'Drag to look around. Pinch to zoom. Two fingers to move. Tap an agent or a request box for details.'
+        : 'Drag to look around. Scroll to zoom. Right-drag to move. Click an agent or a request box for details.'}
     </div>
   );
 }
