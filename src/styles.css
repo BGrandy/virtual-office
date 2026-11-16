@@ -201,12 +201,12 @@ textarea { resize: vertical; }
 .out-changes { border-color: #f0b4b6; }
 .out-changes .out-title { color: var(--alert); }
 
-.trail { border-left: 2px solid var(--line); margin-left: 4px; padding-left: 12px; display: grid; gap: 7px; }
-.trail li { position: relative; font-size: 13px; display: grid; grid-template-columns: 42px 1fr; gap: 6px; }
+.trail { border-left: 2px solid var(--line); margin-left: 4px; padding-left: 12px; display: grid; grid-template-columns: auto 1fr; gap: 7px 8px; }
+.trail li { position: relative; font-size: 13px; display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
 .trail li::before { content: ''; position: absolute; left: -17px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
 .trail .is-rework::before { background: var(--alert); }
 .trail .is-you::before { background: var(--gold); box-shadow: 0 0 0 1px #c99700; }
-.trail time, .feed time { color: var(--ink-3); font-size: 12px; padding-top: 1px; }
+.trail time, .feed time { color: var(--ink-3); font-size: 12px; padding-top: 1px; min-width: 36px; white-space: nowrap; }
 .trail em { color: var(--ink-2); }
 
 .tags { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -225,8 +225,8 @@ textarea { resize: vertical; }
 .policy + .meta { margin-top: 8px; }
 
 /* ---------- activity log ---------- */
-.feed { display: grid; gap: 2px; }
-.ev { display: grid; grid-template-columns: 42px 1fr; gap: 6px; padding: 5px 6px 5px 10px; border-left: 3px solid var(--line); font-size: 13px; }
+.feed { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; }
+.ev { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; padding: 5px 6px 5px 10px; border-left: 3px solid var(--line); font-size: 13px; }
 .ev button { border: 0; background: none; padding: 0; text-align: left; }
 .ev button:hover { text-decoration: underline; }
 .ev-new { border-left-color: #2f6bff; }
