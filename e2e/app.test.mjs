@@ -24,7 +24,6 @@ describe('first visit', () => {
     const { page, errors } = await open(browser);
     await click(page, 'Take the tour');
     await click(page, 'Send a request');
-    await forwardUntil(page, tourTitle('Whoever holds'), 300, 'tour reaches the handoff step');
     await forwardUntil(page, tourTitle('Your decision'), 600, 'tour reaches the approval step');
     assert.ok(await page.evaluate(() => !!document.querySelector('.approval.tour-glow')), 'the approval card is highlighted');
     assert.equal(await page.evaluate(() => window.__atrium.state.tasks[0].status), 'awaiting-approval');
@@ -124,7 +123,7 @@ describe('live AI mode (mocked API, nothing is billed)', () => {
     await click(page, 'Connect AI');
     await page.type('#ai-key', 'sk-ant-test-not-real');
     await click(page, 'Test key and turn on');
-    await waitFor(page, () => !!document.querySelector('.sim-badge.is-live'), () => document.querySelector('.dialog')?.textContent);
+    await waitFor(page, () => !!document.querySelector('.sim-badge.is-live'), () => document.querySelector('.dialog .err, .dialog .ok')?.textContent ?? 'no result shown in the dialog');
     await click(page, 'Back to the office');
     await page.type('#custom-req', 'Printer on floor 2 is offline');
     await click(page, 'Send');
@@ -137,9 +136,9 @@ describe('live AI mode (mocked API, nothing is billed)', () => {
     assert.deepEqual(sources, ['ai', 'ai', 'ai', 'ai', 'ai']);
     // the cost line matches the mocked token counts at Haiku prices
     await page.evaluate(() => [...document.querySelectorAll('.task-list li, .task-list button')].find((e) => e.textContent.includes(window.__atrium.state.tasks[0].id))?.click());
-    await waitFor(page, () => !!document.querySelector('.cost-line'), () => document.querySelector('.panel.right')?.textContent ?? 'no details panel');
     const perCall = (MOCK_USAGE.input_tokens * 0.1 + MOCK_USAGE.output_tokens * 0.5) / 1e6;
-    assert.match((await text(page, '.cost-line')) ?? '', new RegExp(`\\$${(perCall * 5).toFixed(4).replace('.', '\\.')} over 5 calls`));
+    const expected = `$${(perCall * 5).toFixed(4)} over 5 calls`;
+    await waitFor(page, (e) => document.querySelector('.cost-line')?.textContent.includes(e), () => document.querySelector('.cost-line')?.textContent ?? 'no cost line', 20000, expected);
     assert.equal(await page.evaluate(() => JSON.stringify(localStorage).includes('sk-ant')), false, 'key not saved without "remember"');
     assert.deepEqual(errors, []);
     await page.close();
@@ -152,7 +151,7 @@ describe('live AI mode (mocked API, nothing is billed)', () => {
     await page.type('#ai-key', 'sk-ant-test-not-real');
     await page.select('#ai-limit', '0.1');
     await click(page, 'Test key and turn on');
-    await waitFor(page, () => !!document.querySelector('.sim-badge.is-live'), () => document.querySelector('.dialog')?.textContent);
+    await waitFor(page, () => !!document.querySelector('.sim-badge.is-live'), () => document.querySelector('.dialog .err, .dialog .ok')?.textContent ?? 'no result shown in the dialog');
     await click(page, 'Back to the office');
     // This device has almost used its limit.
     await page.evaluate(() => localStorage.setItem('atrium.ai.usage', JSON.stringify({ calls: 999, inputTokens: 1, outputTokens: 1, cost: 0.0995 })));

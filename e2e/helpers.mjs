@@ -86,23 +86,31 @@ export async function open(browser, path = '?quality=light', { width = 1440, hei
   return { page, calls, errors };
 }
 
-/** Clicks the first visible button (or `selector`) whose text contains `text`. Fails if there is none. */
-export async function click(page, text, selector = 'button') {
-  const ok = await page.evaluate((t, s) => {
-    const el = [...document.querySelectorAll(s)].find((e) => e.textContent.trim().includes(t) && e.offsetParent !== null);
-    if (el) el.click();
-    return !!el;
-  }, text, selector);
-  if (!ok) throw new Error(`No visible ${selector} containing "${text}"`);
+/**
+ * Clicks the first visible, enabled button (or `selector`) whose text contains `text`.
+ * Retries for a few seconds, because a slow machine may not have drawn or enabled it yet.
+ */
+export async function click(page, text, selector = 'button', timeout = 10000) {
+  const end = Date.now() + timeout;
+  for (;;) {
+    const ok = await page.evaluate((t, s) => {
+      const el = [...document.querySelectorAll(s)].find((e) => e.textContent.trim().includes(t) && e.offsetParent !== null && !e.disabled);
+      if (el) el.click();
+      return !!el;
+    }, text, selector);
+    if (ok) break;
+    if (Date.now() > end) throw new Error(`No visible, enabled ${selector} containing "${text}"`);
+    await sleep(100);
+  }
   await sleep(150);
 }
 
 /** Waits for `fn` to be true in the page; on timeout, the error includes `explain()` from the page. */
-export async function waitFor(page, fn, explain = () => '', timeout = 20000) {
+export async function waitFor(page, fn, explain = () => '', timeout = 20000, ...args) {
   try {
-    await page.waitForFunction(fn, { timeout, polling: 100 });
+    await page.waitForFunction(fn, { timeout, polling: 100 }, ...args);
   } catch {
-    throw new Error(`Timed out waiting for ${fn.toString()}. Page says: ${await page.evaluate(explain)}`);
+    throw new Error(`Timed out waiting for ${fn.toString()}${args.length ? ` (${args.join(', ')})` : ''}. Page says: ${await page.evaluate(explain)}`);
   }
 }
 
