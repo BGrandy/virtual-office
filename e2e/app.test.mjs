@@ -4,7 +4,7 @@
 
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { MOCK_USAGE, click, forward, forwardUntil, launch, open, sleep, startServer, text } from './helpers.mjs';
+import { MOCK_USAGE, click, forward, forwardUntil, launch, open, startServer, text, waitFor } from './helpers.mjs';
 
 let stop;
 let browser;
@@ -73,13 +73,11 @@ describe('the workflow', () => {
     await forward(page, 15); // last carrier walks home
     assert.ok(await page.evaluate(() => Object.values(window.__atrium.state.agents).every((a) => a.activity === 'idle')), 'every agent is back at its desk');
     await click(page, 'Dashboard', '[role=tab]');
-    await sleep(300);
-    assert.ok(((await text(page, '.insight p')) ?? '').length > 20, 'the dashboard gives a plain-language finding');
+    await waitFor(page, () => (document.querySelector('.insight p')?.textContent.length ?? 0) > 20, () => document.querySelector('.panel.left')?.textContent);
     await page.hover('.hb-work');
-    await sleep(200);
-    assert.ok(await text(page, '.chart-tip'), 'chart bars have tooltips');
+    await waitFor(page, () => !!document.querySelector('.chart-tip')?.textContent, () => 'no tooltip after hovering a bar');
     await click(page, 'Show table');
-    assert.ok(await page.evaluate(() => !!document.querySelector('.panel table')), 'the chart has a table view');
+    await waitFor(page, () => !!document.querySelector('.panel table'), () => 'no table after "Show table"');
     assert.deepEqual(errors, []);
     await page.close();
   });
@@ -88,17 +86,19 @@ describe('the workflow', () => {
     const { page, errors } = await open(browser);
     await click(page, 'Explore on my own');
     const id = await page.evaluate(() => window.__atrium.createTask('lockout').id);
+    // Pause at each moment so a slow machine has time to draw it before we look.
     await forwardUntil(page, () => window.__atrium.state.agents.bolt.consult?.phase === 'talking', 300, 'Bolt reaches Iris');
-    await sleep(200);
-    assert.ok(await page.evaluate(() => !!document.querySelector('.tag-ask')), 'the question is shown over Bolt');
+    await page.evaluate(() => window.__atrium.setPaused(true));
+    await waitFor(page, () => !!document.querySelector('.tag-ask'), () => document.querySelector('.labels')?.textContent);
     assert.equal(await page.evaluate(() => !!document.querySelector('.tag-reply')), false, 'one speaker at a time');
+    await page.evaluate(() => window.__atrium.setPaused(false));
     await forwardUntil(page, () => !!window.__atrium.state.agents.iris.reply, 30, 'Iris answers');
-    await sleep(200);
-    assert.ok(await page.evaluate(() => !!document.querySelector('.tag-reply')), 'the answer is shown over Iris');
+    await page.evaluate(() => window.__atrium.setPaused(true));
+    await waitFor(page, () => !!document.querySelector('.tag-reply'), () => document.querySelector('.labels')?.textContent);
+    await page.evaluate(() => window.__atrium.setPaused(false));
     await forwardUntil(page, () => window.__atrium.state.agents.bolt.activity === 'working', 60, 'Bolt goes back to work');
     await page.evaluate((i) => [...document.querySelectorAll('.chip')].find((c) => c.textContent.includes(i))?.click(), id);
-    await sleep(300);
-    assert.ok(await page.evaluate(() => !!document.querySelector('.trail .is-consult')), 'the request history shows the question and answer');
+    await waitFor(page, () => !!document.querySelector('.trail .is-consult'), () => document.querySelector('.trail')?.textContent ?? 'no history panel');
     assert.deepEqual(errors, []);
     await page.close();
   });
@@ -124,7 +124,7 @@ describe('live AI mode (mocked API, nothing is billed)', () => {
     await click(page, 'Connect AI');
     await page.type('#ai-key', 'sk-ant-test-not-real');
     await click(page, 'Test key and turn on');
-    await page.waitForFunction(() => !!document.querySelector('.sim-badge.is-live'), { timeout: 15000 });
+    await waitFor(page, () => !!document.querySelector('.sim-badge.is-live'), () => document.querySelector('.dialog')?.textContent);
     await click(page, 'Back to the office');
     await page.type('#custom-req', 'Printer on floor 2 is offline');
     await click(page, 'Send');
@@ -137,7 +137,7 @@ describe('live AI mode (mocked API, nothing is billed)', () => {
     assert.deepEqual(sources, ['ai', 'ai', 'ai', 'ai', 'ai']);
     // the cost line matches the mocked token counts at Haiku prices
     await page.evaluate(() => [...document.querySelectorAll('.task-list li, .task-list button')].find((e) => e.textContent.includes(window.__atrium.state.tasks[0].id))?.click());
-    await sleep(300);
+    await waitFor(page, () => !!document.querySelector('.cost-line'), () => document.querySelector('.panel.right')?.textContent ?? 'no details panel');
     const perCall = (MOCK_USAGE.input_tokens * 0.1 + MOCK_USAGE.output_tokens * 0.5) / 1e6;
     assert.match((await text(page, '.cost-line')) ?? '', new RegExp(`\\$${(perCall * 5).toFixed(4).replace('.', '\\.')} over 5 calls`));
     assert.equal(await page.evaluate(() => JSON.stringify(localStorage).includes('sk-ant')), false, 'key not saved without "remember"');
@@ -152,7 +152,7 @@ describe('live AI mode (mocked API, nothing is billed)', () => {
     await page.type('#ai-key', 'sk-ant-test-not-real');
     await page.select('#ai-limit', '0.1');
     await click(page, 'Test key and turn on');
-    await page.waitForFunction(() => !!document.querySelector('.sim-badge.is-live'), { timeout: 15000 });
+    await waitFor(page, () => !!document.querySelector('.sim-badge.is-live'), () => document.querySelector('.dialog')?.textContent);
     await click(page, 'Back to the office');
     // This device has almost used its limit.
     await page.evaluate(() => localStorage.setItem('atrium.ai.usage', JSON.stringify({ calls: 999, inputTokens: 1, outputTokens: 1, cost: 0.0995 })));
@@ -177,8 +177,7 @@ describe('phone', () => {
     await click(page, 'Explore on my own');
     assert.equal(await page.evaluate(() => !!document.querySelector('.panel.left')), false, 'panel starts closed so the office is visible');
     await page.tap('.icon-btn.only-narrow');
-    await sleep(200);
-    assert.ok(await page.evaluate(() => !!document.querySelector('.panel.left')), 'menu opens the panel');
+    await waitFor(page, () => !!document.querySelector('.panel.left'), () => 'menu did not open the panel');
     await click(page, 'Dashboard', '[role=tab]');
     await page.goto(page.url().replace('?quality=light', '?quality=light&checklist'), { waitUntil: 'load' });
     await page.waitForFunction(() => !!document.querySelector('.dialog'));

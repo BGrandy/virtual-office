@@ -60,11 +60,20 @@ export async function open(browser, path = '?quality=light', { width = 1440, hei
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('dialog', (d) => d.accept());
   await page.setRequestInterception(true);
-  page.on('request', (r) => {
+  page.on('request', async (r) => {
     if (!r.url().startsWith('https://api.anthropic.com')) return r.continue();
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
     if (r.method() === 'OPTIONS') return r.respond({ status: 204, headers: cors });
-    const body = JSON.parse(r.postData());
+    // Newer Chrome versions do not always attach the body to the intercepted request.
+    let raw = r.postData();
+    if (raw === undefined && r.hasPostData()) raw = await r.fetchPostData();
+    let body;
+    try {
+      body = JSON.parse(raw ?? '{}');
+    } catch (e) {
+      errors.push(`mock API could not read a request body: ${e.message}`);
+      return r.respond({ status: 400, headers: cors, body: '{}' });
+    }
     const tool = body.tools?.[0]?.name;
     calls.push({ model: body.model, tool, headers: r.headers() });
     const stage = (tool || '').replace('submit_', '');
@@ -86,6 +95,15 @@ export async function click(page, text, selector = 'button') {
   }, text, selector);
   if (!ok) throw new Error(`No visible ${selector} containing "${text}"`);
   await sleep(150);
+}
+
+/** Waits for `fn` to be true in the page; on timeout, the error includes `explain()` from the page. */
+export async function waitFor(page, fn, explain = () => '', timeout = 20000) {
+  try {
+    await page.waitForFunction(fn, { timeout, polling: 100 });
+  } catch {
+    throw new Error(`Timed out waiting for ${fn.toString()}. Page says: ${await page.evaluate(explain)}`);
+  }
 }
 
 export const text = (page, selector) => page.evaluate((s) => document.querySelector(s)?.textContent ?? null, selector);
