@@ -192,6 +192,66 @@ describe('live AI orchestration', () => {
   });
 });
 
+describe('consults', () => {
+  it('lets an agent ask another a question without handing the request over', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('lockout');
+    run(sim, () => sim.state.agents.bolt.activity === 'consulting');
+    // Bolt still owns the request while walking over to Iris.
+    expect(t.ownerId).toBe('bolt');
+    expect(t.status).toBe('active');
+    const progress = t.progress;
+    run(sim, () => sim.state.agents.bolt.consult?.phase === 'talking');
+    // Question first, answer second, never both bubbles at once.
+    expect(sim.state.agents.bolt.say).toBe(sim.state.agents.bolt.consult!.question);
+    expect(sim.state.agents.iris.reply).toBeUndefined();
+    run(sim, () => !!sim.state.agents.iris.reply);
+    expect(sim.state.agents.bolt.say).toBeUndefined();
+    expect(t.progress).toBe(progress); // the work waits while Bolt is away
+    run(sim, () => sim.state.agents.bolt.activity === 'working');
+    expect(sim.state.agents.iris.reply).toBeUndefined();
+    expect(t.consults).toHaveLength(1);
+    expect(t.consults![0]).toMatchObject({ from: 'bolt', to: 'iris', stage: 'execution' });
+    run(sim, () => t.status === 'done');
+    // Asked once, and the handoff record is unchanged.
+    expect(t.consults).toHaveLength(1);
+    expect(t.history.map((h) => h.from)).toEqual(['iris', 'atlas', 'bolt', 'sage', 'echo']);
+  });
+
+  it('does not ask again on a rework pass', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('phishing');
+    run(sim, () => t.status === 'done');
+    expect(t.rework).toBe(1);
+    expect(t.consults).toHaveLength(1);
+  });
+
+  it('stops the consult and goes home when the supervisor puts the request on hold', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('lockout');
+    run(sim, () => sim.state.agents.bolt.consult?.phase === 'talking');
+    sim.setHeld(t.id, true);
+    run(sim, () => sim.state.agents.bolt.activity === 'idle');
+    expect(sim.state.agents.iris.reply).toBeUndefined();
+    expect(t.consults ?? []).toHaveLength(0);
+    sim.setHeld(t.id, false);
+    run(sim, () => t.status === 'done');
+    expect(t.consults).toHaveLength(1); // asked once it resumed
+  });
+
+  it('waits for the other agent to be back at their desk before asking', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('vpn'); // Atlas asks Sage during planning
+    run(sim, () => t.stage === 'planning' && t.status === 'active');
+    // send Sage away on a walk
+    sim.state.agents.sage.activity = 'returning';
+    sim.state.agents.sage.path = [[0, 0], [...sim.state.agents.sage.pos]];
+    run(sim, () => sim.state.agents.atlas.say?.startsWith('Waiting to ask') ?? false);
+    run(sim, () => (t.consults?.length ?? 0) === 1);
+    expect(t.consults![0]).toMatchObject({ from: 'atlas', to: 'sage', stage: 'planning' });
+  });
+});
+
 describe('busy office', () => {
   it('clears eight mixed requests with agents crossing paths and no deadlock', () => {
     const sim = new Simulation();

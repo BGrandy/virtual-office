@@ -49,7 +49,7 @@ function Welcome({ onClose }: { onClose: () => void }) {
 
 const ROWS: [string, 'Working' | 'Optional' | 'Simulated' | 'Proposed', string][] = [
   ['3D office, camera, selection, follow mode', 'Working', 'Real-time three.js scene you can orbit, zoom and click.'],
-  ['Workflow engine', 'Working', 'A tested state machine handles ownership, queues, priority, handoffs, rework, escalation and the approval gate.'],
+  ['Workflow engine', 'Working', 'A tested state machine handles ownership, queues, priority, handoffs, questions between agents, rework, escalation and the approval gate.'],
   ['Supervisor controls', 'Working', 'Approve, request changes, hold, resume, reassign, cancel and the approval rule all change the run.'],
   ['Dashboard and guided tour', 'Working', 'Figures are computed live from the run, not made up.'],
   ['Response-time targets and audit export', 'Working', 'Countdowns per priority, alerts when a request is at risk, and each request\'s full history as JSON or CSV.'],

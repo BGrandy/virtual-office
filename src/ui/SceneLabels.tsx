@@ -5,7 +5,7 @@ import { labelRef } from '../state/labelRegistry';
 import { useSim, useUI } from '../state/store';
 import { slaInfo } from '../sim/sla';
 
-const ACTIVITY = { idle: 'idle', working: 'working', carrying: 'handing off', returning: 'walking back' } as const;
+const ACTIVITY = { idle: 'idle', working: 'working', carrying: 'handing off', returning: 'walking back', consulting: 'asking a question' } as const;
 
 export function SceneLabels() {
   const s = useSim();
@@ -24,15 +24,17 @@ export function SceneLabels() {
         const on = selected?.kind === 'agent' && selected.id === id;
         const holdsSelected = selected?.kind === 'task' && a.taskId === selected.id;
         return (
-          <div key={id} className={`lbl${on || holdsSelected ? ' lbl-focus' : ''}`} ref={labelRef(`agent:${id}`)}>
+          // A conversation between two agents is always shown, even in a crowded office.
+          <div key={id} className={`lbl${on || holdsSelected || a.reply || a.consult?.phase === 'talking' ? ' lbl-focus' : ''}`} ref={labelRef(`agent:${id}`)}>
             <button
               className={`tag${on ? ' is-selected' : ''}`}
               style={{ '--c': p.color } as React.CSSProperties}
               onClick={() => select({ kind: 'agent', id })}
               aria-label={`${p.name}, ${p.role}, ${ACTIVITY[a.activity]}`}
             >
-              {a.say && (
-                <span className="tag-say">
+              {a.reply && <span className="tag-say tag-reply">{a.reply}</span>}
+              {a.say && !a.reply && (
+                <span className={`tag-say${a.consult?.phase === 'talking' ? ' tag-ask' : ''}`}>
                   {a.say}
                   {a.activity === 'working' && task && <span className="bar"><span style={{ width: `${Math.round(task.progress * 100)}%` }} /></span>}
                 </span>

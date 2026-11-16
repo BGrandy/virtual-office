@@ -105,8 +105,19 @@ export interface TaskTemplate {
   risky: boolean;
   riskReason?: string;
   stages: Record<WorkStage, StageScript>;
+  /** Optional point in one stage where the owner walks over to ask another agent a question. */
+  consult?: ConsultScript;
   /** Optional scripted review failure, to show the rework loop. */
   rework?: { review: StageScript; fix: StageScript };
+}
+
+export interface ConsultScript {
+  stage: WorkStage;
+  with: AgentId;
+  /** How far through the stage (0..1) the question comes up. */
+  at: number;
+  question: string;
+  answer: string;
 }
 
 export const TEMPLATES: TaskTemplate[] = [
@@ -118,6 +129,7 @@ export const TEMPLATES: TaskTemplate[] = [
     priority: 'P2',
     risky: true,
     riskReason: 'Grants an admin-level finance licence',
+    consult: { stage: 'execution', with: 'atlas', at: 0.4, question: 'Does Maya need the shared Finance drives too, or just her own?', answer: 'Both shared drives, as in the runbook. Leave the admin licence staged.' },
     stages: {
       triage: {
         steps: ['Reading the HR request', 'Matching to the onboarding category', 'Setting priority from the start date'],
@@ -149,6 +161,7 @@ export const TEMPLATES: TaskTemplate[] = [
     priority: 'P1',
     risky: true,
     riskReason: 'Changes a production firewall rule',
+    consult: { stage: 'planning', with: 'sage', at: 0.5, question: 'Can a firewall fix go out in business hours?', answer: 'For a P1 outage, yes: with a rollback ready and a person\'s approval.' },
     stages: {
       triage: {
         steps: ['Reading the report', 'Checking for similar reports in the last hour', 'Raising to P1, multiple people blocked'],
@@ -179,6 +192,7 @@ export const TEMPLATES: TaskTemplate[] = [
     requester: 'Dana (Accounts)',
     priority: 'P2',
     risky: false,
+    consult: { stage: 'execution', with: 'iris', at: 0.5, question: 'Which two people clicked the link?', answer: 'Both in Accounts. Their names are in my triage notes.' },
     stages: {
       triage: {
         steps: ['Reading the reported email', 'Checking sender and link reputation', 'Confirming it is phishing'],
@@ -219,6 +233,7 @@ export const TEMPLATES: TaskTemplate[] = [
     requester: 'Tom (Warehouse)',
     priority: 'P3',
     risky: false,
+    consult: { stage: 'execution', with: 'iris', at: 0.35, question: 'Did Tom pass the identity check at intake?', answer: 'Yes: matched the directory and his manager on record.' },
     stages: {
       triage: {
         steps: ['Reading the request', 'Verifying Tom through the staff directory', 'Standard request, low risk'],
@@ -278,6 +293,17 @@ const CUSTOM: TaskTemplate = {
 export const getTemplate = (id: string): TaskTemplate => TEMPLATES.find((t) => t.id === id) ?? CUSTOM;
 
 /** Picks the script an agent follows for this task and stage, including rework passes. */
+/**
+ * The question, if any, the owner of this stage asks another agent. Scripted
+ * scenarios have their own; typed requests and live-model runs get a general one,
+ * so the scripted text never contradicts what a model wrote.
+ */
+export function consultFor(task: Task): ConsultScript | undefined {
+  const tpl = getTemplate(task.templateId);
+  if (task.mode === 'script' && tpl.id !== 'custom') return tpl.consult;
+  return { stage: 'execution', with: 'atlas', at: 0.4, question: 'Before I go on: anything in the plan to watch for?', answer: 'Follow it in order. Anything unexpected goes to Sage.' };
+}
+
 export function scriptFor(task: Task, stage: WorkStage): StageScript {
   const tpl = getTemplate(task.templateId);
   let s = tpl.stages[stage];

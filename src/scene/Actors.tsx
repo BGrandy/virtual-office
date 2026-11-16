@@ -39,7 +39,8 @@ export function Agent({ id }: { id: AgentId }) {
     root.current.position.set(ag.pos[0], 0, ag.pos[1]);
     root.current.rotation.y = lerpAngle(root.current.rotation.y, ag.heading, 1 - Math.exp(-12 * dt));
     const working = ag.activity === 'working';
-    const moving = ag.activity === 'carrying' || ag.activity === 'returning';
+    const moving = ag.activity === 'carrying' || ag.activity === 'returning' || (ag.activity === 'consulting' && ag.path.length > 0);
+    const talking = (ag.activity === 'consulting' && ag.path.length === 0) || !!ag.reply;
     bob.current.position.y = 0.1 + Math.sin(t * (moving ? 9 : 2)) * (moving ? 0.03 : 0.025);
     bob.current.rotation.x = moving ? 0.1 : 0;
     // A tall tower of waiting work makes the agent nervous: every few seconds it glances up at the pile.
@@ -47,8 +48,9 @@ export function Agent({ id }: { id: AgentId }) {
     const atDesk = ag.activity === 'working' || ag.activity === 'idle';
     const nervous = atDesk && tower.count >= 6 && !reduceMotion;
     const glancing = nervous && (t % 4.2) < 1.3;
-    let lookX = working ? 0.32 : 0;
-    let lookY = working ? Math.sin(t * 1.3) * 0.18 : ag.activity === 'idle' ? Math.sin(t * 0.35) * 0.5 : 0;
+    // Talking: a small nod, looking straight ahead.
+    let lookX = talking ? Math.sin(t * 6) * 0.08 : working ? 0.32 : 0;
+    let lookY = talking ? 0 : working ? Math.sin(t * 1.3) * 0.18 : ag.activity === 'idle' ? Math.sin(t * 0.35) * 0.5 : 0;
     if (glancing) {
       // which side of the agent the tower is on, in the agent's own frame
       const right = Math.cos(ag.heading) * (tower.x - ag.pos[0]) - Math.sin(ag.heading) * (tower.z - ag.pos[1]);

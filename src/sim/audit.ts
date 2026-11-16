@@ -34,6 +34,7 @@ export function taskAudit(s: SimState, t: Task, exportedAt: string) {
       finished: sp.finished === undefined ? null : round(sp.finished),
     })),
     handoffs: t.history.map((h) => ({ sim_time: round(h.t), kind: h.kind, from: who(h.from), to: who(h.to), from_stage: STAGE_META[h.fromStage].label, to_stage: STAGE_META[h.toStage].label, note: h.note ?? null })),
+    consults: (t.consults ?? []).map((c) => ({ sim_time: round(c.t), stage: STAGE_META[c.stage].label, asked_by: who(c.from), asked: who(c.to), question: c.question, answer: c.answer })),
     outputs: t.outputs.map((o) => ({ sim_time: round(o.t), stage: STAGE_META[o.stage].label, by: who(o.by), written_by: o.source === 'ai' ? o.model ?? 'model' : o.source ?? 'script', title: o.title, body: o.body, result: o.kind ?? 'ok' })),
     events: s.events.filter((e) => e.taskId === t.id).map((e) => ({ sim_time: round(e.t), type: e.type, actor: e.actor ? who(e.actor) : null, text: e.text })),
   };

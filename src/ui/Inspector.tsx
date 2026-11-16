@@ -121,15 +121,24 @@ function TaskInspector({ t }: { t: Task }) {
       </section>
 
       <section>
-        <h3>Who had it, and when</h3>
+        <h3>History</h3>
         <ol className="trail">
           <li><time>{clock(t.createdAt)}</time><span>{t.requester} sent the request, Iris received it</span></li>
-          {t.history.map((h, i) => (
-            <li key={i} className={h.kind === 'rework' ? 'is-rework' : h.kind === 'reassign' || h.kind === 'approval' ? 'is-you' : ''}>
-              <time>{clock(h.t)}</time>
-              <span>{trailText(h)}{h.note && h.kind !== 'reassign' ? <em> ({h.note})</em> : null}</span>
-            </li>
-          ))}
+          {[
+            ...t.history.map((h, i) => ({ t: h.t, key: `h${i}`, el: (
+              <li key={`h${i}`} className={h.kind === 'rework' ? 'is-rework' : h.kind === 'reassign' || h.kind === 'approval' ? 'is-you' : ''}>
+                <time>{clock(h.t)}</time>
+                <span>{trailText(h)}{h.note && h.kind !== 'reassign' ? <em> ({h.note})</em> : null}</span>
+              </li>
+            ) })),
+            // Questions asked along the way. The request stayed with the asker.
+            ...(t.consults ?? []).map((c, i) => ({ t: c.t, key: `c${i}`, el: (
+              <li key={`c${i}`} className="is-consult">
+                <time>{clock(c.t)}</time>
+                <span>{actorName(c.from)} asked {actorName(c.to)}: “{c.question}” <em>{actorName(c.to)}: “{c.answer}”</em></span>
+              </li>
+            ) })),
+          ].sort((x, y) => x.t - y.t).map((x) => x.el)}
         </ol>
       </section>
 
@@ -153,7 +162,7 @@ function AgentInspector({ id }: { id: AgentId }) {
   const current = s.tasks.find((t) => t.id === a.taskId);
   const queue = sim.queueFor(id);
   const recent = s.events.filter((e) => e.actor === id).slice(-6).reverse();
-  const state = a.activity === 'working' ? 'Working' : a.activity === 'carrying' ? 'Handing off' : a.activity === 'returning' ? 'Walking back to desk' : 'Idle, waiting for work';
+  const state = a.activity === 'working' ? 'Working' : a.activity === 'carrying' ? 'Handing off' : a.activity === 'returning' ? 'Walking back to desk' : a.activity === 'consulting' ? `Asking ${AGENTS[a.consult!.with].name} a question` : a.reply ? 'Answering a question' : 'Idle, waiting for work';
   return (
     <>
       <header className="insp-head">

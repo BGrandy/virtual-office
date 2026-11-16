@@ -32,6 +32,8 @@ export function statusText(t: Task): string {
     return `${actorName(t.ownerId)} is handing it to ${t.next.ownerId === 'human' ? 'you' : actorName(t.next.ownerId)}`;
   }
   if (t.status === 'queued') return `In ${actorName(t.ownerId)}'s tray, next up: ${STAGE_META[t.stage].label.toLowerCase()}`;
+  const owner = t.ownerId !== 'human' ? sim.state.agents[t.ownerId] : undefined;
+  if (owner?.consult?.taskId === t.id) return `${actorName(t.ownerId)} is asking ${actorName(owner.consult.with)} a question`;
   const pending = t.mode === 'ai' && t.stage !== 'approval' && t.stage !== 'done' && t.ai[`${t.stage}:${t.rework}`]?.status === 'pending' && t.progress >= 0.8;
   return `${actorName(t.ownerId)}: ${pending ? 'waiting for the model' : STAGE_META[t.stage].verb.toLowerCase()}`;
 }

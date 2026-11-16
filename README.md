@@ -63,6 +63,8 @@ I chose an IT service desk as the setting because it is the work this role does,
 
 Separating the technician from the reviewer is deliberate. It is the same control a human team uses: the one who makes a change is not the one who signs it off.
 
+Agents also ask each other questions. Partway through a step, the owner can walk over to a colleague's desk with a question: the technician checks a detail of the plan with the planner, or the planner asks the reviewer what policy allows before writing the plan. The request stays with the one asking, the answer is shown as a conversation over both robots, and the exchange is kept in the request's history and audit export. This is the difference between a relay, where each agent only passes work on, and a team.
+
 ## How a real team would use it
 
 **Morning.** The IT lead opens Atrium on a second monitor. Overnight requests are already moving. Routine ones, such as account lockouts, have been closed by the agents without anyone touching them. The lead sees one box glowing on the supervisor console: a new-hire setup that includes an admin licence.
@@ -130,7 +132,7 @@ Choose **Take the tour** on the welcome screen. It sends the new-hire request an
 5. **Approve.** Everything stops. The box turns red on your console, the top bar shows "Need you: 1", and the approval card is highlighted. You approve, or request changes with a note.
 6. **Complete.** The box moves to Echo, who writes the reply to HR, closes the ticket and carries the box to the middle of the room, where it turns gold and joins the pyramid.
 
-At each step the right panel adds the agent's output and a line in "Who had it, and when". While an agent carries a request, a dashed arc shows where it is going: the carrier's colour for a normal handoff, gold when it is going to you, red when it is being sent back.
+At each step the right panel adds the agent's output and a line in its History. While an agent carries a request, a dashed arc shows where it is going: the carrier's colour for a normal handoff, gold when it is going to you, red when it is being sent back.
 
 ![The tour at the approval step](docs/approval.png)
 
@@ -288,7 +290,7 @@ stateDiagram-v2
   Complete --> [*]: Echo files it
 ```
 
-Within each stage a task is `queued` (in the owner's tray), `active` (being worked on) or `handoff` (being carried). Ownership changes only when the carrier arrives, so a task always has exactly one owner. Agents take the earliest response-time deadline first and skip anything on hold. Each visit to a step is recorded as a span (arrived, started, finished), which is what the dashboard measures.
+Within each stage a task is `queued` (in the owner's tray), `active` (being worked on) or `handoff` (being carried). Ownership changes only when the carrier arrives, so a task always has exactly one owner. A consult does not change ownership: the owner leaves the request on their desk, asks, and comes back to it. Each scenario has at most one consult, only on the first pass through a step, and the owner waits at their desk if the colleague is away. Agents take the earliest response-time deadline first and skip anything on hold. Each visit to a step is recorded as a span (arrived, started, finished), which is what the dashboard measures.
 
 In live AI mode the engine asks for a model result when an agent starts a step, holds the progress bar at 80% until it arrives, then plays the model's own step descriptions in the speech bubble.
 

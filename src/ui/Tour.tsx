@@ -40,7 +40,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Bolt does the work, but not all of it',
-    body: () => 'Bolt creates the account and sets up the laptop. The risky admin licence is staged, not applied. It waits for a person.',
+    body: () => 'Bolt creates the account and sets up the laptop. Partway through, Bolt walks over to check a detail with Atlas: agents ask each other questions, not just pass work on. The risky admin licence is staged, not applied. It waits for a person.',
     focus: () => ({ kind: 'agent', id: 'bolt' }),
     done: (t) => t.stage === 'review' || t.stage === 'approval' || t.stage === 'delivery' || t.stage === 'done',
     waiting: 'Bolt is executing',

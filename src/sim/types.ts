@@ -72,6 +72,16 @@ export interface Handoff {
   kind: 'handoff' | 'rework' | 'reassign' | 'approval';
 }
 
+/** One agent asking another a question partway through its own step. Ownership does not change. */
+export interface Consult {
+  from: AgentId;
+  to: AgentId;
+  stage: Stage;
+  t: number;
+  question: string;
+  answer: string;
+}
+
 export interface Task {
   id: string;
   templateId: string;
@@ -93,6 +103,8 @@ export interface Task {
   next?: { stage: Stage; ownerId: Actor; kind: Handoff['kind']; note?: string };
   history: Handoff[];
   outputs: Output[];
+  /** Questions this request's owners asked other agents along the way. */
+  consults?: Consult[];
   timeline: StageSpan[];
   mode: ExecMode;
   /** Live model results keyed by `${stage}:${rework}`. */
@@ -111,7 +123,7 @@ export interface Task {
   completedAt?: number;
 }
 
-export type AgentActivity = 'idle' | 'working' | 'carrying' | 'returning';
+export type AgentActivity = 'idle' | 'working' | 'carrying' | 'returning' | 'consulting';
 
 export interface AgentState {
   id: AgentId;
@@ -122,6 +134,10 @@ export interface AgentState {
   path: Vec2[];
   /** Short line shown in the agent's speech bubble. */
   say?: string;
+  /** Set while walking to another agent's desk to ask a question, talking, and walking back. */
+  consult?: { taskId: string; with: AgentId; phase: 'going' | 'talking' | 'back'; until?: number; answerAt?: number; question: string; answer: string };
+  /** An answer this agent is giving to someone who came to ask. */
+  reply?: string;
   stagesCompleted: number;
   /** Simulated seconds spent working or carrying. */
   busy: number;
@@ -130,7 +146,7 @@ export interface AgentState {
 export type EventType =
   | 'created' | 'started' | 'step' | 'output' | 'handoff' | 'rework'
   | 'approval-requested' | 'approved' | 'rejected' | 'completed'
-  | 'held' | 'resumed' | 'cancelled' | 'reassigned' | 'policy' | 'ai-error' | 'sla-breach';
+  | 'held' | 'resumed' | 'cancelled' | 'reassigned' | 'policy' | 'ai-error' | 'sla-breach' | 'consult';
 
 export interface SimEvent {
   id: number;

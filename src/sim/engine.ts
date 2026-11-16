@@ -9,11 +9,11 @@
 // priority, flag risk or ask for changes, but it can never skip review, approve
 // its own work, or loop forever: those rules live here, not in a prompt.
 
-import { AGENTS, AGENT_IDS, PRIORITY_NAME, SLA_REAL, STAGE_DURATION, STAGE_META, STAGE_OWNER, actorName, getTemplate, outputTitle, reviewWillFail, scriptFor, type StageScript } from './data';
+import { AGENTS, AGENT_IDS, PRIORITY_NAME, SLA_REAL, STAGE_DURATION, STAGE_META, STAGE_OWNER, actorName, consultFor, getTemplate, outputTitle, reviewWillFail, scriptFor, type ConsultScript, type StageScript } from './data';
 import { AGENT_STATION, headingOf, station, type Station } from './layout';
 import { dueAt } from './sla';
 import { riskCheck } from './risk';
-import type { Actor, AgentId, AgentState, AIStageResult, ApprovalPolicy, EventType, Handoff, SimState, StageSpan, Task, Vec2, WorkStage } from './types';
+import type { Actor, AgentId, Consult, AgentState, AIStageResult, ApprovalPolicy, EventType, Handoff, SimState, StageSpan, Task, Vec2, WorkStage } from './types';
 
 export const SAVE_VERSION = 5;
 const WALK_SPEED = 3.4;
@@ -21,6 +21,8 @@ const WALK_SPEED = 3.4;
 const AI_HOLD = 0.8;
 /** The orchestrator allows one rework pass from the reviewer; after that it escalates to a person. */
 const MAX_AGENT_REWORK = 1;
+/** How long a consult conversation lasts, in simulated seconds: the question, then the answer. */
+const TALK_TIME = 7;
 
 export function freshState(): SimState {
   const agents = {} as Record<AgentId, AgentState>;
@@ -242,10 +244,23 @@ export class Simulation {
           }
         }
 
+        // Partway through, the owner may need to ask another agent something.
+        const ask = this.pendingConsult(t, stage, a.id);
+        if (ask && t.progress >= ask.at) {
+          const other = this.state.agents[ask.with];
+          if (other.activity === 'idle' || other.activity === 'working') {
+            this.startConsult(a, t, ask);
+          } else {
+            const say = `Waiting to ask ${AGENTS[ask.with].name}`;
+            if (a.say !== say) { a.say = say; this.dirty = true; }
+          }
+          return;
+        }
+
         const script = this.stageScript(t, stage);
         const n = script.steps.length;
         const before = Math.floor(t.progress * n);
-        t.progress = Math.min(1, t.progress + dt / STAGE_DURATION[stage]);
+        t.progress = Math.min(ask ? ask.at : 1, t.progress + dt / STAGE_DURATION[stage]);
         const after = Math.floor(t.progress * n);
         if (after > before && after < n) {
           a.say = script.steps[after];
@@ -257,6 +272,9 @@ export class Simulation {
         if (t.progress >= 1) this.finishStage(a, t, stage);
         return;
       }
+      case 'consulting':
+        this.tickConsult(a, dt);
+        return;
       case 'carrying':
       case 'returning': {
         if (!this.walk(a, dt)) return;
@@ -276,6 +294,80 @@ export class Simulation {
         return;
       }
     }
+  }
+
+  /** The question this stage's owner still has to ask, if any. Only on the first pass through a stage. */
+  private pendingConsult(t: Task, stage: WorkStage, owner: AgentId): ConsultScript | undefined {
+    const c = consultFor(t);
+    if (!c || c.stage !== stage || c.with === owner || t.rework > 0) return undefined;
+    if (t.consults?.some((x) => x.stage === stage)) return undefined;
+    return c;
+  }
+
+  private startConsult(a: AgentState, t: Task, c: ConsultScript) {
+    const home = station(AGENT_STATION[a.id]);
+    const dest = station(AGENT_STATION[c.with]);
+    // Stand beside the colleague's desk, not in front of it, so both can be seen talking.
+    const slot = (AGENT_IDS.indexOf(a.id) - 2) * 0.42 || 0.84;
+    a.activity = 'consulting';
+    a.consult = { taskId: t.id, with: c.with, phase: 'going', question: c.question, answer: c.answer };
+    a.path = [home.exit, home.gate, [dest.visitor[0] + dest.tangent[0] * slot, dest.visitor[1] + dest.tangent[1] * slot]];
+    a.say = `Quick question for ${AGENTS[c.with].name}`;
+    this.dirty = true;
+  }
+
+  /** Walk over, ask, hear the answer, walk back, carry on. The request stays with the asker throughout. */
+  private tickConsult(a: AgentState, dt: number) {
+    const c = a.consult;
+    const t = this.task(c?.taskId);
+    const other = c ? this.state.agents[c.with] : undefined;
+    // The supervisor stepped in (hold, cancel, reassign): stop asking and go home.
+    if (!c || !t || t.status !== 'active' || t.ownerId !== a.id || t.held) {
+      if (t && t.status === 'active' && t.ownerId === a.id) t.status = 'queued';
+      if (other && other.reply === c?.answer) other.reply = undefined;
+      const home = station(AGENT_STATION[a.id]);
+      a.consult = undefined;
+      a.taskId = undefined;
+      a.say = undefined;
+      a.activity = 'returning';
+      a.path = [home.gate, home.exit, home.home];
+      this.dirty = true;
+      return;
+    }
+    if (c.phase === 'going') {
+      if (!this.walk(a, dt)) return;
+      c.phase = 'talking';
+      c.until = this.state.time + TALK_TIME;
+      c.answerAt = this.state.time + TALK_TIME / 2;
+      a.heading = Math.atan2(other!.pos[0] - a.pos[0], other!.pos[1] - a.pos[1]);
+      a.say = c.question;
+      this.log('consult', `${AGENTS[a.id].name} asked ${AGENTS[c.with].name} about ${t.id}: ${c.question}`, t.id, a.id);
+      return;
+    }
+    if (c.phase === 'talking') {
+      // Turn-taking: the question shows first, then the answer, never both at once.
+      if (this.state.time >= c.answerAt! && a.say === c.question) {
+        a.say = undefined;
+        other!.reply = c.answer;
+        this.log('consult', `${AGENTS[c.with].name} answered ${AGENTS[a.id].name}: ${c.answer}`, t.id, c.with);
+        return;
+      }
+      if (this.state.time < c.until!) return;
+      const record: Consult = { from: a.id, to: c.with, stage: t.stage, t: this.state.time, question: c.question, answer: c.answer };
+      (t.consults ??= []).push(record);
+      if (other!.reply === c.answer) other!.reply = undefined;
+      const home = station(AGENT_STATION[a.id]);
+      c.phase = 'back';
+      a.path = [home.gate, home.exit, home.home];
+      a.say = 'Back to it';
+      return;
+    }
+    if (!this.walk(a, dt)) return;
+    a.consult = undefined;
+    a.activity = 'working';
+    a.heading = headingOf(station(AGENT_STATION[a.id]).inward);
+    a.say = this.sayFor(t, t.stage as WorkStage);
+    this.dirty = true;
   }
 
   private sayFor(t: Task, stage: WorkStage) {
