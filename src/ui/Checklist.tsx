@@ -194,7 +194,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 'd-url',
         ask: 'Live preview URL, deployed to a hosting platform',
         status: 'Met',
-        how: 'The app is hosted on GitHub Pages. Every push to the main branch runs the tests, builds the site and publishes it, so the public link always matches the code in the repository.',
+        how: 'The app is hosted on GitHub Pages. Every push to the main branch runs the tests, builds the site and publishes it only if they pass, so the public link always matches the code in the repository.',
         see: [
           { label: 'Open the live site', href: LIVE },
           { label: 'See the deploy runs', href: `${REPO}/actions` },

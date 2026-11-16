@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -20,4 +21,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), ...(mode === 'single' ? [viteSingleFile()] : [])],
   define: { __BUILD__: JSON.stringify({ commit: commit(), time: new Date().toISOString() }) },
   build: { chunkSizeWarningLimit: 1600, outDir: mode === 'single' ? 'dist-single' : 'dist' },
+  // Unit tests only; the browser tests in e2e/ run separately with `npm run test:browser`.
+  test: { include: ['src/**/*.test.ts'] },
 }));
