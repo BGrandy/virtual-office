@@ -129,9 +129,63 @@ function Desk({ id, n }: { id: AgentId; n: number }) {
 function Inbox() {
   const st = station('inbox');
   const glow = useRef<Mesh>(null!);
-  useFrame(({ clock }) => {
-    (glow.current.material as unknown as { opacity: number }).opacity = 0.35 + Math.sin(clock.elapsedTime * 2) * 0.12;
+  const sign = useRef<Group>(null!);
+  const seen = useRef({ count: sim.state.tasks.length, flash: 0 });
+  // A sign on top says what this is: an envelope and the word "Inbox".
+  const tex = useCanvasTexture(
+    (ctx, w, h) => {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.roundRect(4, 4, w - 8, h - 8, 28);
+      ctx.fill();
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
+      // envelope
+      const ex = 44, ey = 42, ew = 132, eh = 92;
+      ctx.lineWidth = 9;
+      ctx.lineJoin = 'round';
+      ctx.fillStyle = '#FFC53D';
+      ctx.beginPath();
+      ctx.roundRect(ex, ey, ew, eh, 10);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ex + 6, ey + 8);
+      ctx.lineTo(ex + ew / 2, ey + eh * 0.58);
+      ctx.lineTo(ex + ew - 6, ey + 8);
+      ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.font = '700 96px "Bricolage Grotesque Variable", sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Inbox', 206, h / 2 + 6);
+    },
+    512, 176, 'inbox-sign',
+  );
+  useFrame(({ clock }, dt) => {
+    // Flash the slot and nudge the sign each time a new request comes in.
+    const m = seen.current;
+    const count = sim.state.tasks.length;
+    if (count > m.count) m.flash = 1;
+    m.count = count;
+    m.flash = Math.max(0, m.flash - dt * 1.4);
+    (glow.current.material as unknown as { opacity: number }).opacity = Math.min(1, 0.35 + Math.sin(clock.elapsedTime * 2) * 0.12 + m.flash * 0.65);
+    sign.current.scale.setScalar(1 + m.flash * 0.12);
   });
+  const envelope = (x: number, z: number, rot: number, key: string) => (
+    <group key={key} position={[x, 0.55, z]} rotation={[0, rot, 0]}>
+      <mesh castShadow>
+        <boxGeometry args={[0.46, 0.025, 0.3]} />
+        <meshStandardMaterial color="#FFFFFF" roughness={0.7} />
+      </mesh>
+      {/* the flap */}
+      <mesh position={[0, 0.014, -0.05]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
+        <planeGeometry args={[0.2, 0.2]} />
+        <meshStandardMaterial color="#DDE4EC" roughness={0.7} />
+      </mesh>
+    </group>
+  );
   return (
     <>
     <StationGroup st={st}>
@@ -151,6 +205,21 @@ function Inbox() {
         <boxGeometry args={[1.5, 0.06, 0.7]} />
         <meshStandardMaterial color={WOOD} />
       </mesh>
+      {/* a few letters already in the tray */}
+      {envelope(-0.38, 0.3, 0.25, 'e1')}
+      {envelope(0.32, 0.36, -0.4, 'e2')}
+      <group ref={sign} position={[0, 2.16, -0.2]}>
+        <mesh castShadow>
+          <boxGeometry args={[2.2, 0.78, 0.08]} />
+          <meshStandardMaterial color={INK} roughness={0.6} />
+        </mesh>
+        {tex && (
+          <mesh position={[0, 0, 0.045]}>
+            <planeGeometry args={[2.12, 0.73]} />
+            <meshBasicMaterial map={tex} transparent />
+          </mesh>
+        )}
+      </group>
     </StationGroup>
     <FloorLabel st={st} n={null} title="Requests in" sub="Email, chat, portal" color={INK} />
     </>
