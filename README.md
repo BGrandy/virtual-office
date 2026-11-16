@@ -88,7 +88,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 
 | To do this | Do this |
 |---|---|
-| Look around | Drag to orbit, scroll to zoom, right-drag (or two-finger drag) to move. "Reset view" returns to the overview. |
+| Look around | Mouse: drag to orbit, scroll to zoom, right-drag to move. Touch: drag to orbit, pinch to zoom, two-finger drag to move. The on-screen hint shows whichever applies. "Reset view" returns to the overview. |
 | Learn it in two minutes | Welcome screen, "Take the tour". Reopen it any time from "Guide". |
 | Start a request | Left panel, "Start a request". Pick one of four scenarios or type your own. |
 | Load the office | "Simulate a busy morning" sends eight mixed requests at once. Waiting work stacks into towers on the desks, and finished work builds the gold pyramid in the middle of the room. |
