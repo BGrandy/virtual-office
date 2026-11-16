@@ -51,6 +51,8 @@ export interface AIStageResult {
   error?: string;
   model?: string;
   logged?: boolean;
+  /** Estimated dollar cost of this call, from its token counts and published prices. */
+  cost?: number;
 }
 
 /** One visit to one stage. Drives the dashboard: wait = started - arrived, work = finished - started. */
@@ -146,7 +148,7 @@ export interface AgentState {
 export type EventType =
   | 'created' | 'started' | 'step' | 'output' | 'handoff' | 'rework'
   | 'approval-requested' | 'approved' | 'rejected' | 'completed'
-  | 'held' | 'resumed' | 'cancelled' | 'reassigned' | 'policy' | 'ai-error' | 'sla-breach' | 'consult';
+  | 'held' | 'resumed' | 'cancelled' | 'reassigned' | 'policy' | 'ai-error' | 'sla-breach' | 'consult' | 'cleared';
 
 export interface SimEvent {
   id: number;

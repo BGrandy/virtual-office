@@ -48,6 +48,10 @@ export interface Metrics {
 
 const touchedByHuman = (t: Task) => t.history.some((h) => h.from === 'human' || h.kind === 'reassign') || t.outputs.some((o) => o.by === 'human') || t.held;
 
+/** Estimated cost of every live model call made for this request. */
+export const aiCost = (t: Task) => Object.values(t.ai).reduce((n, r) => n + (r.cost ?? 0), 0);
+export const aiCalls = (t: Task) => Object.values(t.ai).filter((r) => r.cost !== undefined).length;
+
 export function computeMetrics(s: SimState): Metrics {
   const tasks = s.tasks;
   const done = tasks.filter((t) => t.status === 'done');

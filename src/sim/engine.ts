@@ -178,6 +178,16 @@ export class Simulation {
     this.log('policy', policy === 'all' ? 'Approval rule changed: every task now stops for you.' : 'Approval rule changed: only risky work stops for you.', undefined, 'human');
   }
 
+  /** Removes completed and cancelled requests. Their log lines stay; the dashboard counts from what is left. */
+  clearFinished(): number {
+    const s = this.state;
+    const before = s.tasks.length;
+    s.tasks = s.tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled');
+    const n = before - s.tasks.length;
+    if (n > 0) this.log('cleared', `You cleared ${n} finished ${n === 1 ? 'request' : 'requests'}.`, undefined, 'human');
+    return n;
+  }
+
   setSpeed(speed: number) { this.state.speed = speed; this.dirty = true; }
   setPaused(paused: boolean) { this.state.paused = paused; this.dirty = true; }
   reset() { this.state = freshState(); this.dirty = true; }

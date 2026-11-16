@@ -4,6 +4,8 @@ import type { AgentId, Handoff, Task } from '../sim/types';
 import { actions, sim, useSim, useUI } from '../state/store';
 import { ActorChip, Pipeline, PriorityTag, SlaChip, clock, riskReason, statusText } from './bits';
 import { taskAudit, taskEventsCsv } from '../sim/audit';
+import { aiCalls, aiCost } from '../sim/metrics';
+import { dollars } from '../ai/budget';
 import { download, stamp } from './download';
 
 export function PolicyControl() {
@@ -103,6 +105,11 @@ function TaskInspector({ t }: { t: Task }) {
 
       <section>
         <h3>Work produced</h3>
+        {aiCalls(t) > 0 && (
+          <p className="meta cost-line">
+            Live model cost for this request: <strong>{dollars(aiCost(t))}</strong> over {aiCalls(t)} {aiCalls(t) === 1 ? 'call' : 'calls'}. An estimate from published prices.
+          </p>
+        )}
         {t.outputs.length === 0 && <p className="empty">Each agent's output will appear here as it finishes its step.</p>}
         {[...t.outputs].reverse().map((o, i) => (
           <details key={t.outputs.length - i} className={`out${o.kind === 'changes' ? ' out-changes' : ''}`} open={i === 0}>

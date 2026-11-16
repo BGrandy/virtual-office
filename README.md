@@ -105,9 +105,11 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Export a request's history | Open the request, "Audit record", then "Download JSON" or "Download CSV". All requests: Dashboard, "Download all requests (CSV)". |
 | Change graphics quality | Top bar badge ("What's real?"), then Graphics: Auto, Full or Light. Or add `?quality=light` to the URL. |
 | Read the full log | Left panel, "Log". Click any line to jump to that request. |
-| Use a real model | Top bar, "Connect AI". See [Live AI mode](#live-ai-mode). |
+| Use a real model | Top bar, "Connect AI". Each request then shows what its model calls cost. See [Live AI mode](#live-ai-mode). |
 | Control time | Top bar: Pause, 1x, 2x, 4x. |
 | See what is simulated | Top bar, "Simulated demo" badge. |
+| Tidy up a long session | Left panel, "Clear finished" next to the Finished heading. Removes completed and cancelled requests from the list, the pile and the dashboard; requests in progress stay. |
+| Check which version is running | "Simulated demo" badge: the version (the commit it was built from) and build time are under the graphics setting. |
 | Start over | "Simulated demo" badge, then "Reset demo". |
 
 Progress is saved in the browser, so a reload continues where you left off. The office keeps running in a background tab. On a phone, the panels open as sheets from the bottom so the office stays visible above them.
@@ -190,7 +192,7 @@ A model can never skip review, approve its own work or change who owns a task. T
 
 **The key.** It is sent only from your browser to `api.anthropic.com`, using the API's opt-in header for direct browser calls. There is no Atrium server. By default it is kept for the current tab only; "Remember on this device" is opt-in. One request makes five short calls, a fraction of a cent with Haiku.
 
-**Spending limit.** Live mode has a hard cap on this device: $0.10, $0.25 (default) or $1.00. Every call's real token use (from the API response) is priced at the published rates and added up. Before each call, the app checks that even a worst-case call (largest possible prompt, full 900-token answer) cannot take the total past the limit; if it could, the call is not made, live AI switches itself off, and that step uses its script, labelled with the reason. The counter survives reloads and new tabs and can be reset. At most three calls run at once, and "Simulate a busy morning" asks before sending eight requests in live mode. With Haiku, one request costs roughly a fifth of a cent, so the default limit covers well over a hundred requests. This is an estimate; the Console's billing page is the real record, and a spend limit there is the account-level backstop.
+**Spending limit.** Live mode has a hard cap on this device: $0.10, $0.25 (default) or $1.00. Every call's real token use (from the API response) is priced at the published rates and added up. Before each call, the app checks that even a worst-case call (largest possible prompt, full 900-token answer) cannot take the total past the limit; if it could, the call is not made, live AI switches itself off, and that step uses its script, labelled with the reason. The counter survives reloads and new tabs and can be reset. Each request also shows its own cost, and the audit export includes it. At most three calls run at once, and "Simulate a busy morning" asks before sending eight requests in live mode. With Haiku, one request costs roughly a fifth of a cent, so the default limit covers well over a hundred requests. This is an estimate; the Console's billing page is the real record, and a spend limit there is the account-level backstop.
 
 **Honest scope.** The automated checks run this path end to end against a mocked API that returns realistic tool calls, covering the request format, headers, model ID and response parsing. I also ran it by hand with a real key on routine, risky and fraudulent requests, and fixed what those runs exposed (for example, time spent waiting on the model no longer counts against the response target).
 

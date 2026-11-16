@@ -194,7 +194,15 @@ export function LeftPanel() {
             <NewRequest compact={s.tasks.length > 0} />
             {closed.length > 0 && (
               <section>
-                <h2>Finished</h2>
+                <div className="row between">
+                  <h2>Finished</h2>
+                  <button
+                    className="text-btn"
+                    onClick={() => { if (confirm(`Clear ${closed.length} finished ${closed.length === 1 ? 'request' : 'requests'}? They leave this list, the completed pile and the dashboard figures. Requests in progress are kept.`)) actions.clearFinished(); }}
+                  >
+                    Clear finished
+                  </button>
+                </div>
                 <ul className="task-list">{closed.map((t) => <TaskRow key={t.id} t={t} />)}</ul>
               </section>
             )}

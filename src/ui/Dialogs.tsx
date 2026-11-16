@@ -81,6 +81,19 @@ function GraphicsSetting() {
   );
 }
 
+/** Which version is running, so a viewer can tell whether they have the latest. */
+function BuildStamp() {
+  const { commit, time } = __BUILD__;
+  const when = new Date(time).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  return (
+    <p className="meta build-stamp">
+      Version{' '}
+      {commit === 'dev' ? 'dev' : <a href={`https://github.com/BGrandy/virtual-office/commit/${commit}`} target="_blank" rel="noreferrer">{commit}</a>}
+      , built {when}.
+    </p>
+  );
+}
+
 function About({ onClose }: { onClose: () => void }) {
   return (
     <Dialog title="What is real in this demo" onClose={onClose} wide>
@@ -97,6 +110,7 @@ function About({ onClose }: { onClose: () => void }) {
         </tbody>
       </table>
       <GraphicsSetting />
+      <BuildStamp />
       <div className="row end">
         <button className="btn ghost" onClick={() => { if (confirm('Clear all requests and start over?')) actions.reset(); }}>Reset demo</button>
         <button className="btn ghost" onClick={() => useUI.getState().setDialog('ai')}>Connect a model</button>

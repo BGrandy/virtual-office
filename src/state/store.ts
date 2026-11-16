@@ -7,7 +7,7 @@
 
 import { create } from 'zustand';
 import { errorMessage, modelLabel, runStage, testConnection, type CallUsage } from '../ai/anthropic';
-import { DEFAULT_LIMIT, EMPTY_USAGE, MAX_CONCURRENT, addUsage, canAfford, dollars, type Usage } from '../ai/budget';
+import { DEFAULT_LIMIT, EMPTY_USAGE, MAX_CONCURRENT, addUsage, canAfford, costOf, dollars, type Usage } from '../ai/budget';
 import { BUSY_MORNING } from '../sim/data';
 import { Simulation } from '../sim/engine';
 import { DEFAULT_VALUE, type ValueAssumptions } from '../sim/metrics';
@@ -99,11 +99,16 @@ function requestAI(task: Task, stage: WorkStage, key: string) {
   if (slot) slot.model = modelLabel(ai.model);
   // Snapshot the task so later changes do not alter what this call sees.
   const snapshot = JSON.parse(JSON.stringify(task)) as Task;
-  runStage({ apiKey: ai.apiKey, model: ai.model }, snapshot, stage, (u) => recordUsage(ai.model, u))
-    .then((r) => sim.provideAI(task.id, key, r))
+  // A call can be billed even if its answer is unusable, so the cost is kept either way.
+  let cost: number | undefined;
+  runStage({ apiKey: ai.apiKey, model: ai.model }, snapshot, stage, (u) => {
+    recordUsage(ai.model, u);
+    cost = costOf(ai.model, u.inputTokens, u.outputTokens);
+  })
+    .then((r) => sim.provideAI(task.id, key, { ...r, cost }))
     .catch((e) => {
       const msg = errorMessage(e);
-      sim.provideAI(task.id, key, { status: 'error', error: msg });
+      sim.provideAI(task.id, key, { status: 'error', error: msg, cost });
       useUI.setState({ aiError: msg });
     })
     .finally(() => inFlight.delete(id));
@@ -203,6 +208,7 @@ export const actions = {
     if (mode() === 'ai' && !confirm(`Live AI is on. A busy morning sends ${BUSY_MORNING.length} requests, up to ${BUSY_MORNING.length * 5} model calls, within your ${dollars(useUI.getState().ai.limit)} spending limit. Continue?`)) return [];
     return run(() => BUSY_MORNING.map((id) => sim.createTask(id, undefined, mode())));
   },
+  clearFinished: () => run(() => sim.clearFinished()),
   approve: (id: string, note?: string) => run(() => sim.approve(id, note)),
   reject: (id: string, note?: string) => run(() => sim.reject(id, note)),
   setHeld: (id: string, held: boolean) => run(() => sim.setHeld(id, held)),

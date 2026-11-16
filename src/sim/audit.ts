@@ -3,6 +3,7 @@
 
 import { PRIORITY_NAME, SLA_REAL, STAGE_META, actorName } from './data';
 import { slaInfo } from './sla';
+import { aiCalls, aiCost } from './metrics';
 import type { SimState, Task } from './types';
 
 const who = (a: string) => (a === 'human' ? 'Supervisor' : actorName(a));
@@ -25,6 +26,8 @@ export function taskAudit(s: SimState, t: Task, exportedAt: string) {
       response_target_result: sla?.state ?? 'not applicable',
       rework_rounds: t.rework,
       approval_reason: t.riskReason ?? null,
+      live_model_calls: aiCalls(t),
+      live_model_cost_usd_estimate: Math.round(aiCost(t) * 1e6) / 1e6,
     },
     stages: t.timeline.map((sp) => ({
       stage: STAGE_META[sp.stage].label,
