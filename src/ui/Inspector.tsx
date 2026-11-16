@@ -6,6 +6,7 @@ import { ActorChip, Pipeline, PriorityTag, SlaChip, clock, riskReason, statusTex
 import { taskAudit, taskEventsCsv } from '../sim/audit';
 import { aiCalls, aiCost } from '../sim/metrics';
 import { dollars } from '../ai/budget';
+import { SheetHandle, useSwipeToClose } from './sheet';
 import { download, stamp } from './download';
 
 export function PolicyControl() {
@@ -277,13 +278,17 @@ export function Inspector() {
   const s = useSim();
   const selected = useUI((st) => st.selected);
   const select = useUI((st) => st.select);
+  const sheet = useSwipeToClose(() => select(null));
   if (!selected) return null;
   const task = selected.kind === 'task' ? s.tasks.find((t) => t.id === selected.id) : undefined;
   if (selected.kind === 'task' && !task) return null;
   return (
-    <aside className="panel right" aria-label="Details">
+    <aside className="panel right" aria-label="Details" ref={sheet.panel}>
+      <SheetHandle {...sheet.handle} />
       <button className="close" onClick={() => select(null)} aria-label="Close details">×</button>
       <div className="panel-body">
+        {/* Shown when this panel covers the request list (tablet-sized windows). */}
+        <button className="back-btn" onClick={() => select(null)}>‹ Back to requests</button>
         {selected.kind === 'agent' && <AgentInspector id={selected.id} />}
         {selected.kind === 'human' && <HumanInspector />}
         {task && <TaskInspector key={task.id} t={task} />}

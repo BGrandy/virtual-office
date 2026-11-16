@@ -4,7 +4,7 @@ import { OrbitControls } from '@react-three/drei';
 import { Vector3, type PerspectiveCamera } from 'three';
 import { AGENT_IDS } from '../sim/data';
 import { station } from '../sim/layout';
-import { sim, useSim, useUI } from '../state/store';
+import { ONE_PANEL_MAX, sim, useSim, useUI } from '../state/store';
 import { Agent, Packet } from './Actors';
 import { Celebrations, HandoffArcs } from './Effects';
 import { Office } from './Office';
@@ -16,7 +16,8 @@ const HOME_TARGET = new Vector3(0, 0.6, -2.4);
 const HOME_DIR = new Vector3(0, 16.4, 22.7).normalize();
 /** Pull the camera back on narrow or panel-crowded screens so the whole horseshoe stays in view. */
 function homePosition(out: Vector3, width: number, height: number) {
-  const free = width > 900 ? width - 732 : width;
+  // Space left for the office: two side panels on a wide screen, one up to tablet width, none on a phone.
+  const free = width > ONE_PANEL_MAX ? width - 732 : width > 900 ? width - 420 : width;
   const dist = 27 * Math.max(1, (FIT * height) / free);
   return out.copy(HOME_DIR).multiplyScalar(dist).add(HOME_TARGET);
 }
@@ -51,7 +52,9 @@ function CameraRig() {
   useFrame((st, dt) => {
     const ui = useUI.getState();
     const wide = st.size.width > 900;
-    const wantX = wide ? -((ui.leftOpen ? 348 : 0) - (ui.selected ? 384 : 0)) / 2 : 0;
+    // Up to tablet width the details panel sits over the request list, so only the left side is covered.
+    const onePanel = st.size.width <= ONE_PANEL_MAX;
+    const wantX = !wide ? 0 : onePanel ? -(ui.leftOpen || ui.selected ? 348 : 0) / 2 : -((ui.leftOpen ? 348 : 0) - (ui.selected ? 384 : 0)) / 2;
     const wantY = !wide && (ui.selected || ui.leftOpen) ? st.size.height * 0.24 : !wide && ui.tour ? -st.size.height * 0.12 : 0;
     const o = offset.current;
     const k = 1 - Math.exp(-5 * dt);
@@ -114,7 +117,12 @@ function CameraRig() {
     controls.update();
   });
   // Runs after the camera has moved this frame, so labels never lag behind.
-  useFrame((st) => syncLabels(st.camera, st.size.width, st.size.height));
+  useFrame((st) => {
+    const ui = useUI.getState();
+    // Name tags stay clear of the side panel on wider screens, and inside the view on a phone.
+    const leftInset = st.size.width > 900 && (ui.leftOpen || (ui.selected && st.size.width <= ONE_PANEL_MAX)) ? 356 : 6;
+    syncLabels(st.camera, st.size.width, st.size.height, leftInset);
+  });
   return null;
 }
 

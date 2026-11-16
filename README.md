@@ -114,7 +114,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Check which version is running | "Simulated demo" badge: the version (the commit it was built from) and build time are under the graphics setting. |
 | Start over | "Simulated demo" badge, then "Reset demo". |
 
-Progress is saved in the browser, so a reload continues where you left off. The office keeps running in a background tab. On a phone, the panels open as sheets from the bottom so the office stays visible above them.
+Progress is saved in the browser, so a reload continues where you left off. The office keeps running in a background tab. On a phone, the panels open as sheets from the bottom so the office stays visible above them; drag a sheet's handle down to close it. On a tablet-sized window there is room for one side panel, so a request's details open in place of the request list ("Back to requests" returns) and the office keeps the rest of the screen.
 
 ![The assessment checklist: every requirement of the brief, with the Interaction requirement open to show how it is met and buttons that show it in the app](docs/checklist.png)
 
@@ -298,7 +298,7 @@ stateDiagram-v2
 
 Within each stage a task is `queued` (in the owner's tray), `active` (being worked on) or `handoff` (being carried). Ownership changes only when the carrier arrives, so a task always has exactly one owner. A consult does not change ownership: the owner leaves the request on their desk, asks, and comes back to it. Each scenario has at most one consult, only on the first pass through a step, and the owner waits at their desk if the colleague is away. Agents take the earliest response-time deadline first and skip anything on hold. Each visit to a step is recorded as a span (arrived, started, finished), which is what the dashboard measures.
 
-In live AI mode the engine asks for a model result when an agent starts a step, holds the progress bar at 80% until it arrives, then plays the model's own step descriptions in the speech bubble.
+In live AI mode the engine asks for a model result when an agent starts a step, holds the progress bar at 80% until it arrives, then plays the model's own step descriptions under the agent's name.
 
 ### State updates
 
@@ -359,9 +359,10 @@ flowchart TB
 
 - **Ownership is physical.** A task has one location and so one owner. This removes the most common confusion in multi-agent views.
 - **The human is drawn as a person, on a raised platform, in a different colour.** The approval step should look different from the automated steps because it is different.
-- **Work you can count at a glance.** Waiting requests stack into a tower on the owner's desk. The next one is at the bottom, so when it is taken the tower drops a level, Jenga-style. The taller the tower, the more it sways, and once it is tall the agent starts glancing up at it nervously (and eventually sweating). Ten boxes are shown; a tag on top gives the full count. Finished requests are carried to the middle of the room and turn gold as they build a pyramid: filled from the bottom up so no box floats, and rebuilt one size larger when it outgrows its base. It grows wider faster than taller, so even 500 requests stay on screen. The placement rules are unit-tested.
+- **Work you can count at a glance.** Waiting requests stack into a tower on the owner's desk. The next one is at the bottom, so when it is taken the tower drops a level, Jenga-style. The taller the tower, the more it sways, and once it is tall the agent starts glancing up at it nervously (and eventually sweating). Ten boxes are shown; a tag on the front of the desk gives the full count. Finished requests are carried to the middle of the room and turn gold as they build a pyramid: filled from the bottom up so no box floats, and rebuilt one size larger when it outgrows its base. It grows wider faster than taller, so even 500 requests stay on screen. The placement rules are unit-tested.
 - **It looks like an office, and the walls never get in the way.** Wood floor, three walls with windows onto a city view, a whiteboard sketch of the workflow, a sofa, bookshelf, printer and water cooler. The front is open to the camera, and any wall you orbit behind hides itself.
 - **The room is a horseshoe in workflow order.** Work moves left to right around it, so position tells you progress. Floor numbers match the pipeline in the side panel.
+- **Labels that stay small.** Each agent has one compact label: its name, and under it either its role or, while it works, what it is doing right now with a progress bar. Only a conversation between two agents gets a speech bubble. Waiting counts sit on the front of the desk, not over the agent's head. A busy office used to stack three labels above each robot; now it cannot.
 - **Three ways to read the same state.** The room for a glance, the request list for the queue, the inspector for detail. All three are driven by the same engine state, so they cannot disagree.
 - **Blocked on a human is the loudest thing on screen.** Red is used only for that and for rework.
 - **Disclosure is built in.** A permanent badge in the top bar and a note on each agent, not just a line in this file.
@@ -384,7 +385,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm test           # 69 unit tests
 npm run build      # type-check and build to dist/
-npm run test:browser   # 8 browser tests against dist/ (needs Chrome; set CHROME_PATH if it is not at /usr/bin/google-chrome)
+npm run test:browser   # 9 browser tests against dist/ (needs Chrome; set CHROME_PATH if it is not at /usr/bin/google-chrome)
 npm run preview    # serve the production build locally
 ```
 
@@ -415,7 +416,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
   - *Value and export:* the value arithmetic, no negative savings, the full audit trail, and CSV quoting including formula-like text.
   - *Box layout:* towers show ten boxes and count the rest, the next request is at the bottom, taller towers sway more, the pyramid never leaves a box floating (checked for several sizes), 500 completed requests stay under 3.2 m tall and on the plinth, and the pyramid is ordered by completion time.
 - **Type checking** runs with TypeScript strict mode as part of every build.
-- **Browser tests** (`npm run test:browser`, 8 tests in `e2e/`). The built site in headless Chrome, using the app the way a person would, with the simulation fast-forwarded:
+- **Browser tests** (`npm run test:browser`, 9 tests in `e2e/`). The built site in headless Chrome, using the app the way a person would, with the simulation fast-forwarded:
   - The guided tour from the first request to the end, including the approval step.
   - The checklist opened from its direct link, with every requirement having an explanation and a way to see it.
   - A busy morning cleared with approvals, every agent back at its desk, then the dashboard finding, chart tooltip and table view.
@@ -423,7 +424,8 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
   - Clearing finished requests while keeping the one in progress.
   - Live AI mode against a mocked Claude API: all five step calls in order, the request headers, outputs labelled as model-written, the cost line matching the token counts, and the key kept out of saved storage.
   - The spending limit: no call is made that could pass it, live AI switches itself off, and the steps fall back to the script.
-  - A phone screen: the menu opens the request panel and the checklist fits without sideways scrolling.
+  - A phone screen: the menu opens the request panel, dragging a sheet's handle down closes it (a short drag springs back), and the checklist fits without sideways scrolling.
+  - A tablet-sized window: a request's details open over the request list, not beside it, and "Back to requests" returns.
 - **Manual checks** in the browser: screenshots inspected at desktop, tablet and phone sizes; light graphics switching on by itself on a software renderer; the value figures updating when an assumption changes; all three downloads opened and checked; and live AI mode run with a real key on routine, risky and fraudulent requests.
 - **CI** runs the type check, unit tests, build and browser tests on every push, and deploys only if all of them pass.
 

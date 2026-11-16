@@ -4,6 +4,7 @@ import { dollars } from '../ai/budget';
 import { TEMPLATES } from '../sim/data';
 import type { SimEvent, Task } from '../sim/types';
 import { actions, isNarrow, useSim, useUI } from '../state/store';
+import { SheetHandle, useSwipeToClose } from './sheet';
 import { Dashboard } from './Dashboard';
 import { Pipeline, PriorityTag, SlaChip, clock, duration, statusText } from './bits';
 
@@ -163,12 +164,14 @@ export function LeftPanel() {
   const tab = useUI((st) => st.tab);
   const open = useUI((st) => st.leftOpen);
   const setTab = useUI((st) => st.setTab);
+  const sheet = useSwipeToClose(() => useUI.setState({ leftOpen: false }));
   if (!open) return null;
   const need = s.tasks.filter((t) => t.status === 'awaiting-approval');
   const live = s.tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled' && t.status !== 'awaiting-approval');
   const closed = s.tasks.filter((t) => t.status === 'done' || t.status === 'cancelled').reverse();
   return (
-    <aside className="panel left" aria-label="Requests, activity and dashboard">
+    <aside className="panel left" aria-label="Requests, activity and dashboard" ref={sheet.panel}>
+      <SheetHandle {...sheet.handle} />
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'tasks'} className={tab === 'tasks' ? 'on' : ''} onClick={() => setTab('tasks')}>
           Requests{need.length > 0 && <span className="count">{need.length}</span>}

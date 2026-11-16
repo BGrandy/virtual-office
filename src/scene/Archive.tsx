@@ -33,7 +33,9 @@ function TowerAnchor({ id }: { id: AgentId }) {
   useFrame(() => {
     if (!g.current) return;
     const t = boxLayout(sim).towers[id];
-    g.current.position.set(t.x, t.topY + 0.2, t.z);
+    // On the front of the desk, below the tower, so it never adds to the labels above an agent's head.
+    const st = station(AGENT_STATION[id]);
+    g.current.position.set(t.x + st.inward[0] * 0.62, 0.42, t.z + st.inward[1] * 0.62);
     g.current.visible = t.count > 0;
   });
   return <group ref={(o) => { g.current = o; ref(o); }} />;

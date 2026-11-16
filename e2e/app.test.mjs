@@ -171,16 +171,46 @@ describe('live AI mode (mocked API, nothing is billed)', () => {
 });
 
 describe('phone', () => {
-  it('opens the request panel from the menu and keeps the checklist inside the screen', async () => {
+  it('opens the request panel from the menu, closes it with a swipe, and keeps the checklist inside the screen', async () => {
     const { page, errors } = await open(browser, '?quality=light', { width: 390, height: 844, touch: true });
     await click(page, 'Explore on my own');
     assert.equal(await page.evaluate(() => !!document.querySelector('.panel.left')), false, 'panel starts closed so the office is visible');
     await page.tap('.icon-btn.only-narrow');
     await waitFor(page, () => !!document.querySelector('.panel.left'), () => 'menu did not open the panel');
     await click(page, 'Dashboard', '[role=tab]');
+    // The bar at the top of a sheet is a real handle: a short drag springs back, a long one closes it.
+    const drag = async (distance) => {
+      const [x, y] = await page.evaluate(() => { const r = document.querySelector('.panel .sheet-handle').getBoundingClientRect(); return [r.x + r.width / 2, r.y + 10]; });
+      await page.touchscreen.touchStart(x, y);
+      for (let d = 0; d <= distance; d += 10) await page.touchscreen.touchMove(x, y + d);
+      await new Promise((r) => setTimeout(r, 700)); // slow enough not to count as a flick
+      await page.touchscreen.touchEnd();
+    };
+    await drag(30);
+    await waitFor(page, () => !!document.querySelector('.panel.left') && !document.querySelector('.panel.left').style.transform, () => 'sheet did not spring back after a short drag');
+    await drag(160);
+    await waitFor(page, () => !document.querySelector('.panel.left'), () => 'sheet did not close after a long drag');
     await page.goto(page.url().replace('?quality=light', '?quality=light&checklist'), { waitUntil: 'load' });
     await page.waitForFunction(() => !!document.querySelector('.dialog'));
     assert.equal(await page.evaluate(() => { const d = document.querySelector('.dialog'); return d.scrollWidth - d.clientWidth; }), 0, 'no sideways scrolling');
+    assert.deepEqual(errors, []);
+    await page.close();
+  });
+});
+
+describe('tablet', () => {
+  it('opens request details in place of the request list, leaving the office in view', async () => {
+    const { page, errors } = await open(browser, '?quality=light', { width: 1024, height: 700, touch: true });
+    await click(page, 'Explore on my own');
+    const id = await page.evaluate(() => window.__atrium.createTask('lockout').id);
+    await forward(page, 3);
+    await waitFor(page, (i) => [...document.querySelectorAll('.chip')].some((c) => c.textContent.includes(i)), () => 'no request chip in the scene', 20000, id);
+    await page.evaluate((i) => [...document.querySelectorAll('.chip')].find((c) => c.textContent.includes(i)).click(), id);
+    await waitFor(page, () => !!document.querySelector('.panel.right'), () => 'details did not open');
+    const box = await page.evaluate(() => { const r = document.querySelector('.panel.right').getBoundingClientRect(); const l = document.querySelector('.panel.left').getBoundingClientRect(); return { left: r.left, right: r.right, listRight: l.right }; });
+    assert.ok(box.right <= box.listRight + 1, 'details sit over the list, not on the far side of the screen');
+    await click(page, 'Back to requests');
+    await waitFor(page, () => !document.querySelector('.panel.right'), () => 'details did not close');
     assert.deepEqual(errors, []);
     await page.close();
   });

@@ -151,7 +151,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 's-arch',
         ask: 'System architecture, component responsibilities and data/task flow',
         status: 'Met',
-        how: 'Four layers. A workflow engine with no interface code decides everything and is covered by 69 unit tests, and 8 browser tests check the built site. A small store runs the engine and saves progress. The 3D scene and the panels only read from it and send commands. The README has the diagram, a table of what each part is responsible for, and the task flow.',
+        how: 'Four layers. A workflow engine with no interface code decides everything and is covered by 69 unit tests, and 9 browser tests check the built site. A small store runs the engine and saves progress. The 3D scene and the panels only read from it and send commands. The README has the diagram, a table of what each part is responsible for, and the task flow.',
         see: [
           { label: 'Read the architecture', href: readme('architecture') },
           { label: 'Component responsibilities', href: readme('component-responsibilities') },

@@ -13,16 +13,16 @@ export function SceneLabels() {
   const select = useUI((st) => st.select);
   const waiting = s.tasks.filter((t) => t.status === 'awaiting-approval').length;
   const done = s.tasks.filter((t) => t.status === 'done').length;
-  // Busy offices get crowded: speech bubbles only for the selected agent, or anyone when 2 or fewer are talking.
-  const talking = AGENT_IDS.filter((id) => s.agents[id].say).length;
   return (
-    <div className={`labels${talking > 2 ? ' crowded' : ''}`}>
+    <div className="labels">
       {AGENT_IDS.map((id) => {
         const p = AGENTS[id];
         const a = s.agents[id];
         const task = s.tasks.find((t) => t.id === a.taskId);
         const on = selected?.kind === 'agent' && selected.id === id;
         const holdsSelected = selected?.kind === 'task' && a.taskId === selected.id;
+        const asking = a.consult?.phase === 'talking' && !!a.say;
+        const status = !asking && !a.reply ? a.say : undefined;
         return (
           // A conversation between two agents is always shown, even in a crowded office.
           <div key={id} className={`lbl${on || holdsSelected || a.reply || a.consult?.phase === 'talking' ? ' lbl-focus' : ''}`} ref={labelRef(`agent:${id}`)}>
@@ -32,15 +32,19 @@ export function SceneLabels() {
               onClick={() => select({ kind: 'agent', id })}
               aria-label={`${p.name}, ${p.role}, ${ACTIVITY[a.activity]}`}
             >
+              {/* Only a conversation between two agents gets a bubble. Everything else an agent
+                  "says" takes the place of its role under the name, so labels never stack up. */}
               {a.reply && <span className="tag-say tag-reply">{a.reply}</span>}
-              {a.say && !a.reply && (
-                <span className={`tag-say${a.consult?.phase === 'talking' ? ' tag-ask' : ''}`}>
-                  {a.say}
+              {asking && <span className="tag-say tag-ask">{a.say}</span>}
+              <span className="tag-name"><i className="dot" />{p.name}</span>
+              {status ? (
+                <span key="status" className="tag-line tag-status">
+                  <span className="tag-status-text">{status}</span>
                   {a.activity === 'working' && task && <span className="bar"><span style={{ width: `${Math.round(task.progress * 100)}%` }} /></span>}
                 </span>
+              ) : (
+                <span key="role" className="tag-line tag-role">{p.role}</span>
               )}
-              <span className="tag-name"><i className="dot" />{p.name}</span>
-              <span className="tag-role">{p.role}</span>
             </button>
           </div>
         );
