@@ -167,7 +167,15 @@ export const useUI = create<UIState>((set) => ({
   tour: null,
   ai: loadAI(),
   usage: loadUsage(),
-  value: (() => { try { return { ...DEFAULT_VALUE, ...JSON.parse(store.get(VALUE_KEY) ?? '{}') }; } catch { return DEFAULT_VALUE; } })(),
+  // Only the current assumptions are read back, so settings saved by an older version are ignored.
+  value: (() => {
+    try {
+      const saved = JSON.parse(store.get(VALUE_KEY) ?? '{}');
+      return Object.fromEntries(Object.entries(DEFAULT_VALUE).map(([k, d]) => [k, typeof saved[k] === 'number' ? saved[k] : d])) as unknown as ValueAssumptions;
+    } catch {
+      return DEFAULT_VALUE;
+    }
+  })(),
   quality: (() => {
     const q = new URLSearchParams(typeof location !== 'undefined' ? location.search : '').get('quality') ?? store.get(QUALITY_KEY);
     return q === 'full' || q === 'light' ? q : 'auto';

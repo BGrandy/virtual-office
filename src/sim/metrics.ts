@@ -143,13 +143,11 @@ export interface ValueAssumptions {
   manualMinutes: number;
   /** Minutes of a person's time each time they step in (approve, send back, reassign, hold). */
   touchMinutes: number;
-  /** Fully loaded cost of an hour of IT staff time. */
-  hourlyCost: number;
   /** Requests the desk handles on a working day. */
   requestsPerDay: number;
 }
 
-export const DEFAULT_VALUE: ValueAssumptions = { manualMinutes: 25, touchMinutes: 4, hourlyCost: 45, requestsPerDay: 40 };
+export const DEFAULT_VALUE: ValueAssumptions = { manualMinutes: 25, touchMinutes: 4, requestsPerDay: 40 };
 const WORKING_DAYS_PER_MONTH = 21;
 
 export interface ValueEstimate {
@@ -163,10 +161,9 @@ export interface ValueEstimate {
   /** Hours saved across the requests completed in this run. */
   savedHoursRun: number;
   monthlyHours: number;
-  monthlyCost: number;
 }
 
-/** Converts this run's mix of requests into time and cost saved. An estimate from the assumptions, not a measurement. */
+/** Converts this run's mix of requests into staff time saved. An estimate from the assumptions, not a measurement. */
 export function valueEstimate(s: SimState, a: ValueAssumptions): ValueEstimate | null {
   const done = new Set(s.tasks.filter((t) => t.status === 'done').map((t) => t.id));
   if (!done.size) return null;
@@ -181,7 +178,6 @@ export function valueEstimate(s: SimState, a: ValueAssumptions): ValueEstimate |
     savedMinutesPerRequest,
     savedHoursRun: (done.size * savedMinutesPerRequest) / 60,
     monthlyHours,
-    monthlyCost: monthlyHours * a.hourlyCost,
   };
 }
 

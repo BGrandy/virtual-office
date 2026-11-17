@@ -79,7 +79,7 @@ Agents also ask each other questions. Partway through a step, the owner can walk
 - **Cancel it.** The agent drops it immediately.
 - **Change the approval rule** between "risky work only" and "every task". A new team starts cautious and loosens the rule as trust builds.
 
-**End of the week.** Every request has kept its full trail (who had it, when it changed hands, what each agent produced, what the human decided), and the export goes to whoever audits changes. The dashboard shows that most time is spent waiting for approval and that queues build at the technician's desk, which turns into two decisions: widen the approval rule for one low-risk request type, and add a second technician agent. The value panel, filled in with the team's own numbers, gives the hours and cost saved for the monthly report.
+**End of the week.** Every request has kept its full trail (who had it, when it changed hands, what each agent produced, what the human decided), and the export goes to whoever audits changes. The dashboard shows that most time is spent waiting for approval and that queues build at the technician's desk, which turns into two decisions: widen the approval rule for one low-risk request type, and add a second technician agent. The value panel, filled in with the team's own numbers, gives the hours saved for the monthly report.
 
 The business case in one line: people stop doing the routine 80 percent and keep control of the risky 20 percent, with a view that makes the handover between the two obvious.
 
@@ -137,7 +137,7 @@ Every figure is computed live from the run by `src/sim/metrics.ts`, which has it
 |---|---|
 | **What to act on** | One plain-language sentence, chosen by rules in this order: a request about to miss (or past) its response target, a pile-up at a desk right now, requests stuck waiting for you, or otherwise the step that takes the biggest share of each request's time. |
 | **Tiles** | Completed, average time to close, share closed without any human action, share sent back for changes, share that met its response target. |
-| **Value of this setup** | Human minutes per request with Atrium versus by hand, and the hours and cost that frees each month. Uses this run's real mix of requests and interventions, plus four assumptions you can edit. |
+| **Value of this setup** | Human minutes per request with Atrium versus by hand, and the staff hours that frees each month. Uses this run's real mix of requests and interventions, plus three assumptions you can edit. |
 | **Where the time goes** | For each step, the average time a request waited before work started versus the time spent working. Hover for exact figures, or switch to a table. |
 | **Right now** | Each agent's tray size and how busy it has been. |
 | **Your oversight** | Approvals, send-backs, holds, reassignments and cancellations. |
@@ -155,7 +155,7 @@ The demo runs about 60 times faster than a real desk, so one simulated second st
 
 ### Value estimate
 
-Defaults: 25 minutes for a request done by hand, 4 minutes each time a person steps in, $45 an hour, 40 requests a day, 21 working days a month. All four can be changed in the app and are remembered in the browser. The figure is an estimate from those assumptions and the run, and the app says so next to it.
+Defaults: 25 minutes for a request done by hand, 4 minutes each time a person steps in, 40 requests a day, 21 working days a month. The first three can be changed in the app and are remembered in the browser. The figure is an estimate from those assumptions and the run, and the app says so next to it.
 
 Try "Simulate a busy morning": the dashboard shows the queue build at Iris's desk first, then moves on to whichever desk is the bottleneck.
 

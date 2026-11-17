@@ -55,7 +55,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 'n-product',
         ask: 'Focus on product thinking and practical business applications',
         status: 'Met',
-        how: 'The office is built around one real job, an IT service desk, not a generic demo. Requests have priorities and response-time targets, risky changes wait for a person, and every request keeps an exportable history. The dashboard turns a run into business terms: where time goes, which desk is the bottleneck, and an editable estimate of hours and cost saved.',
+        how: 'The office is built around one real job, an IT service desk, not a generic demo. Requests have priorities and response-time targets, risky changes wait for a person, and every request keeps an exportable history. The dashboard turns a run into business terms: where time goes, which desk is the bottleneck, and an editable estimate of hours saved.',
         see: [
           { label: 'Open the dashboard', run: showDashboard },
           { label: 'Read the problem and the idea', href: readme('the-problem-and-the-idea') },

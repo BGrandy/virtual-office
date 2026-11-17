@@ -77,7 +77,6 @@ describe('business value estimate', () => {
     expect(v.savedMinutesPerRequest).toBeCloseTo(23);
     expect(v.savedHoursRun).toBeCloseTo((2 * 23) / 60);
     expect(v.monthlyHours).toBeCloseTo((40 * 21 * 23) / 60);
-    expect(v.monthlyCost).toBeCloseTo(v.monthlyHours * 45);
   });
 
   it('never reports negative savings', () => {
