@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { allRequestsCsv, taskAudit, toCsv } from './audit';
 import { Simulation } from './engine';
-import { DEFAULT_VALUE, computeMetrics, slaInsight, valueEstimate } from './metrics';
+import { computeMetrics, slaInsight } from './metrics';
 import { slaInfo } from './sla';
 
 function runFor(sim: Simulation, seconds: number, approve = true) {
@@ -57,33 +57,6 @@ describe('response-time targets', () => {
     expect(m.slaAlerts[0].task.id).toBe(t.id);
     expect(m.insight).toMatch(new RegExp(`^${t.id} \\(urgent\\) is due in \\d+s and is waiting for your approval\\. Decide on it now\\.`));
     expect(slaInsight([])).toBeUndefined();
-  });
-});
-
-describe('business value estimate', () => {
-  it('is empty until something is completed', () => {
-    expect(valueEstimate(new Simulation().state, DEFAULT_VALUE)).toBeNull();
-  });
-
-  it('counts human time only where a person stepped in', () => {
-    const sim = new Simulation();
-    sim.createTask('lockout'); // no human action
-    sim.createTask('onboarding'); // one approval
-    runFor(sim, 300);
-    const v = valueEstimate(sim.state, DEFAULT_VALUE)!;
-    expect(v.completed).toBe(2);
-    expect(v.touches).toBe(1);
-    expect(v.humanMinutesPerRequest).toBeCloseTo(2); // 4 minutes over 2 requests
-    expect(v.savedMinutesPerRequest).toBeCloseTo(23);
-    expect(v.savedHoursRun).toBeCloseTo((2 * 23) / 60);
-    expect(v.monthlyHours).toBeCloseTo((40 * 21 * 23) / 60);
-  });
-
-  it('never reports negative savings', () => {
-    const sim = new Simulation();
-    sim.createTask('onboarding');
-    runFor(sim, 200);
-    expect(valueEstimate(sim.state, { ...DEFAULT_VALUE, manualMinutes: 1 })!.savedMinutesPerRequest).toBe(0);
   });
 });
 

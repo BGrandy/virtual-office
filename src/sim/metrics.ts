@@ -138,49 +138,6 @@ export function slaInsight(alerts: { task: Task; sla: SlaInfo }[]): string | und
 
 // ------------------------------------------------------------------ business value
 
-export interface ValueAssumptions {
-  /** Minutes a technician spends on a typical request handled entirely by hand. */
-  manualMinutes: number;
-  /** Minutes of a person's time each time they step in (approve, send back, reassign, hold). */
-  touchMinutes: number;
-  /** Requests the desk handles on a working day. */
-  requestsPerDay: number;
-}
-
-export const DEFAULT_VALUE: ValueAssumptions = { manualMinutes: 25, touchMinutes: 4, requestsPerDay: 40 };
-const WORKING_DAYS_PER_MONTH = 21;
-
-export interface ValueEstimate {
-  completed: number;
-  /** Times a person stepped in on the completed requests. */
-  touches: number;
-  /** Average minutes of human time per request with Atrium. */
-  humanMinutesPerRequest: number;
-  /** Minutes saved per request compared with doing it by hand. */
-  savedMinutesPerRequest: number;
-  /** Hours saved across the requests completed in this run. */
-  savedHoursRun: number;
-  monthlyHours: number;
-}
-
-/** Converts this run's mix of requests into staff time saved. An estimate from the assumptions, not a measurement. */
-export function valueEstimate(s: SimState, a: ValueAssumptions): ValueEstimate | null {
-  const done = new Set(s.tasks.filter((t) => t.status === 'done').map((t) => t.id));
-  if (!done.size) return null;
-  const touches = s.events.filter((e) => e.actor === 'human' && e.taskId && done.has(e.taskId) && ['approved', 'rejected', 'held', 'reassigned'].includes(e.type)).length;
-  const humanMinutesPerRequest = (touches * a.touchMinutes) / done.size;
-  const savedMinutesPerRequest = Math.max(0, a.manualMinutes - humanMinutesPerRequest);
-  const monthlyHours = (a.requestsPerDay * WORKING_DAYS_PER_MONTH * savedMinutesPerRequest) / 60;
-  return {
-    completed: done.size,
-    touches,
-    humanMinutesPerRequest,
-    savedMinutesPerRequest,
-    savedHoursRun: (done.size * savedMinutesPerRequest) / 60,
-    monthlyHours,
-  };
-}
-
 const secs = (n: number) => `${Math.round(n)}s`;
 /** How each step is named in a sentence. */
 const WORK: Record<Stage, string> = { triage: 'triage', planning: 'planning', execution: 'the work', review: 'review', approval: 'approval', delivery: 'the reply', done: '' };

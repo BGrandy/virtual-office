@@ -55,7 +55,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 'n-product',
         ask: 'Focus on product thinking and practical business applications',
         status: 'Met',
-        how: 'The office is built around one real job, an IT service desk, not a generic demo. Requests have priorities and response-time targets, risky changes wait for a person, and every request keeps an exportable history. The dashboard turns a run into business terms: where time goes, which desk is the bottleneck, and an editable estimate of hours saved.',
+        how: 'The office is built around one real job, an IT service desk, not a generic demo. Requests have priorities and response-time targets, risky changes wait for a person, and every request keeps an exportable history. The dashboard turns a run into business terms: where time goes, which desk is the bottleneck, and how often people had to step in.',
         see: [
           { label: 'Open the dashboard', run: showDashboard },
           { label: 'Read the problem and the idea', href: readme('the-problem-and-the-idea') },
@@ -151,7 +151,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 's-arch',
         ask: 'System architecture, component responsibilities and data/task flow',
         status: 'Met',
-        how: 'Four layers. A workflow engine with no interface code decides everything and is covered by 71 unit tests, and 9 browser tests check the built site. A small store runs the engine and saves progress. The 3D scene and the panels only read from it and send commands. The README has the diagram, a table of what each part is responsible for, and the task flow.',
+        how: 'Four layers. A workflow engine with no interface code decides everything and is covered by 68 unit tests, and 9 browser tests check the built site. A small store runs the engine and saves progress. The 3D scene and the panels only read from it and send commands. The README has the diagram, a table of what each part is responsible for, and the task flow.',
         see: [
           { label: 'Read the architecture', href: readme('architecture') },
           { label: 'Component responsibilities', href: readme('component-responsibilities') },
@@ -244,7 +244,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
         id: 'c-product',
         ask: 'Product and workflow understanding (30%)',
         status: 'Met',
-        how: 'The workflow follows how a service desk really runs: the most urgent deadline is served first, a reviewer checks the work, risky changes need a person, and a request that fails review twice is escalated instead of looping. The dashboard and value estimate show what this would mean for a team.',
+        how: 'The workflow follows how a service desk really runs: the most urgent deadline is served first, a reviewer checks the work, risky changes need a person, and a request that fails review twice is escalated instead of looping. The dashboard shows what this would mean for a team.',
         see: [
           { label: 'Open the dashboard', run: showDashboard },
           { label: 'Run a request that needs approval', run: runApprovalScenario },

@@ -14,7 +14,7 @@ A browser-based 3D office where five AI agents work an IT support queue as a tea
 
 - **Watch the work move.** Each request is a box carried from desk to desk, so you always see who owns it, where work is piling up and what is waiting on you. A two-minute guided tour shows one request from arrival to closed.
 - **Human in charge.** Risky work stops for your approval, and you can send back, hold, reassign or cancel anything.
-- **Built for a real team.** Response-time targets, a manager dashboard that names the bottleneck, an editable estimate of hours saved, and a full audit export.
+- **Built for a real team.** Response-time targets, a manager dashboard that names the bottleneck, and a full audit export.
 - **Optional live AI.** With your own Claude API key, a real model does each agent's step, under a hard spending cap. The workflow engine, not the model, decides what happens next.
 
 ## Contents
@@ -79,7 +79,7 @@ Agents also ask each other questions. Partway through a step, the owner can walk
 - **Cancel it.** The agent drops it immediately.
 - **Change the approval rule** between "risky work only" and "every task". A new team starts cautious and loosens the rule as trust builds.
 
-**End of the week.** Every request has kept its full trail (who had it, when it changed hands, what each agent produced, what the human decided), and the export goes to whoever audits changes. The dashboard shows that most time is spent waiting for approval and that queues build at the technician's desk, which turns into two decisions: widen the approval rule for one low-risk request type, and add a second technician agent. The value panel, filled in with the team's own numbers, gives the hours saved for the monthly report.
+**End of the week.** Every request has kept its full trail (who had it, when it changed hands, what each agent produced, what the human decided), and the export goes to whoever audits changes. The dashboard shows that most time is spent waiting for approval and that queues build at the technician's desk, which turns into two decisions: widen the approval rule for one low-risk request type, and add a second technician agent.
 
 The business case in one line: people stop doing the routine 80 percent and keep control of the risky 20 percent, with a view that makes the handover between the two obvious.
 
@@ -95,7 +95,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Approve or reject | A red bar appears and the box pulses on your console. Open it, read the review, then "Approve" or "Request changes" with a note. Changes go back to the technician, are re-reviewed against your note, and return to you. |
 | Hold, reassign, cancel | Open the request, "Step in". |
 | Change the approval rule | Click "You" at the supervisor console. |
-| See team performance | Left panel, "Dashboard". Open "Assumptions" to enter your own numbers. |
+| See team performance | Left panel, "Dashboard". |
 | Export | Open a request, "Audit record", "Download JSON" or "Download CSV". All requests: on the Dashboard. |
 | Check it against the brief | "Checklist" in the top bar, or add `?checklist` to the URL. Each requirement says how it is met and links to it. |
 | Use a real model | "Connect AI" in the top bar. See [Live AI mode](#live-ai-mode). |
@@ -137,7 +137,6 @@ Every figure is computed live from the run by `src/sim/metrics.ts`, which has it
 |---|---|
 | **What to act on** | One plain-language sentence, chosen by rules in this order: a request about to miss (or past) its response target, a pile-up at a desk right now, requests stuck waiting for you, or otherwise the step that takes the biggest share of each request's time. |
 | **Tiles** | Completed, average time to close, share closed without any human action, share sent back for changes, share that met its response target. |
-| **Value of this setup** | Human minutes per request with Atrium versus by hand, and the staff hours that frees each month. Uses this run's real mix of requests and interventions, plus three assumptions you can edit. |
 | **Where the time goes** | For each step, the average time a request waited before work started versus the time spent working. Hover for exact figures, or switch to a table. |
 | **Right now** | Each agent's tray size and how busy it has been. |
 | **Your oversight** | Approvals, send-backs, holds, reassignments and cancellations. |
@@ -153,13 +152,9 @@ Every figure is computed live from the run by `src/sim/metrics.ts`, which has it
 
 The demo runs about 60 times faster than a real desk, so one simulated second stands for about one minute. In live AI mode, time spent waiting for the model's answer is not counted against the target: network latency is not desk time. A request is "at risk" in the last quarter of its target. Agents take the earliest deadline first, which puts urgent work ahead without letting old low-priority work wait forever. If a request passes its target while open, that is logged once as an event.
 
-### Value estimate
-
-Defaults: 25 minutes for a request done by hand, 4 minutes each time a person steps in, 40 requests a day, 21 working days a month. The first three can be changed in the app and are remembered in the browser. The figure is an estimate from those assumptions and the run, and the app says so next to it.
-
 Try "Simulate a busy morning": the dashboard shows the queue build at Iris's desk first, then moves on to whichever desk is the bottleneck.
 
-![The dashboard after a busy morning, with the value panel open](docs/dashboard.png)
+![The dashboard after a busy morning](docs/dashboard.png)
 
 ## Live AI mode
 
@@ -199,7 +194,6 @@ A model can never skip review, approve its own work or change who owns a task. T
 | Activity log, per-request outputs and handoff trail | **Working** | Generated by the engine as events happen |
 | Dashboard figures and recommendation | **Working** | Computed from the run, unit-tested |
 | Response-time targets, countdowns and breach events | **Working** | Targets are compressed (see above) |
-| Value estimate | **Working, estimate** | Calculated from the run and editable assumptions, not measured savings |
 | Audit export (JSON, CSV) | **Working** | Times are simulated seconds |
 | Adaptive graphics | **Working** | Auto, Full or Light |
 | Rule-based risk check for typed requests | **Working** | Keyword rules in `src/sim/risk.ts`; runs with or without a model |
@@ -255,7 +249,7 @@ flowchart LR
 | `src/sim/types.ts` | The data model: `Task`, `AgentState`, `Handoff`, `Output`, `StageSpan`, `AIStageResult`, `SimEvent`, `SimState`. Everything is plain JSON. |
 | `src/sim/engine.ts` | The orchestrator. Advances time, lets each agent pick up, work on and hand off tasks, applies supervisor commands, enforces the rules a model may not override, records stage timings, steers walking agents around each other, writes the event log. |
 | `src/sim/data.ts` | Agent profiles and the scripted steps and outputs for each scenario. |
-| `src/sim/metrics.ts` | Dashboard figures, the recommendation sentence and the value estimate, computed from engine state. |
+| `src/sim/metrics.ts` | Dashboard figures and the recommendation sentence, computed from engine state. |
 | `src/sim/risk.ts` | Rule-based risk screen for typed requests. |
 | `src/sim/sla.ts` | Response-time state for a request: on track, at risk, breached, met or missed. |
 | `src/sim/audit.ts` | Builds the JSON and CSV exports, with CSV quoting that guards against spreadsheet formula injection. |
@@ -266,7 +260,7 @@ flowchart LR
 | `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `Room.tsx` builds the walls, floor and furniture; `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
 | `e2e/` | Browser tests: the built site in headless Chrome, with the Claude API mocked. |
-| `*.test.ts` | 71 unit tests across the engine, consults, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
+| `*.test.ts` | 68 unit tests across the engine, consults, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the exports and the box layout. |
 
 ### Task flow
 
@@ -355,7 +349,7 @@ flowchart TB
 - **Colours were checked, not picked by eye.** The five agent colours were ordered with a colour-blindness validator, and every agent is also named, so colour is never the only cue.
 - **The model proposes, the engine decides.** Fixed rules sit under any AI judgement; this is the boundary I would keep in production.
 - **It degrades instead of stuttering.** On a weak graphics chip or a low frame rate it drops shadows and resolution; the viewer can override it.
-- **Numbers come with their reasoning.** The dashboard leads with a plain-language finding, and the value figure sits beside the assumptions that produced it.
+- **The dashboard says what to do.** It leads with a plain-language finding that names the bottleneck and the action, because a manager wants the conclusion first.
 
 ## Run, test and deploy
 
@@ -364,7 +358,7 @@ Requires Node 20.19 or newer (CI uses Node 22).
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 71 unit tests
+npm test           # 68 unit tests
 npm run build      # type-check and build to dist/
 npm run test:browser   # 9 browser tests against dist/ (needs Chrome; set CHROME_PATH if it is not at /usr/bin/google-chrome)
 npm run preview    # serve the production build locally
@@ -384,7 +378,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 71 tests):
+- **Unit tests** (`npm test`, 68 tests):
 
   | Area | What the tests prove |
   |---|---|
@@ -393,7 +387,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
   | Live AI (fake model) | Outputs used and labelled; priority and risk applied; one rework then escalation; a model "pass" cannot skip approval; failures fall back to the script |
   | AI layer and risk rules | Prompts carry only the right context; malformed answers are rejected; risky requests are flagged and routine ones are not; a model cannot override a rule |
   | Spending guard | Published pricing; a call that could cross the cap is refused; 10,000 attempts never overspend |
-  | Dashboard, targets, value, export | The figures and recommendation; on track to at risk to breached; one breach event; the value arithmetic; the audit trail; CSV formula-injection guard |
+  | Dashboard, targets, export | The figures and recommendation; on track to at risk to breached; one breach event; the audit trail; CSV formula-injection guard |
   | Box layout | Towers show ten and count the rest; the pyramid never floats a box and stays under 3.2 m at 500 requests |
 
 - **Type checking** runs with TypeScript strict mode as part of every build.
@@ -402,7 +396,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
   - A busy morning cleared, then the dashboard finding, tooltip and table; a consult shown and recorded; clearing finished requests.
   - Live AI against a mocked API: five calls in order, headers, model labels, the cost line, the key kept out of storage; and the spending cap switching live AI off.
   - Phone (the menu, swipe-to-close sheets, no sideways scrolling) and tablet (details open over the request list).
-- **Manual checks** in the browser: screenshots inspected at desktop, tablet and phone sizes; light graphics switching on by itself on a software renderer; the value figures updating when an assumption changes; all three downloads opened and checked; and live AI mode run with a real key on routine, risky and fraudulent requests.
+- **Manual checks** in the browser: screenshots inspected at desktop, tablet and phone sizes; light graphics switching on by itself on a software renderer; all three downloads opened and checked; and live AI mode run with a real key on routine, risky and fraudulent requests.
 - **CI** runs the type check, unit tests, build and browser tests on every push, and deploys only if all of them pass.
 
 ## Limitations
@@ -415,7 +409,6 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 - One browser, one user. There is no server, login or shared view.
 - State lives in browser storage. Clearing site data resets the demo.
 - Dashboard times and response targets are simulated seconds, compressed about 60 times from a real desk.
-- The value figure is an estimate from assumptions, not measured savings.
 - Needs WebGL. Without it the panels still work but the 3D office does not appear.
 - Agents steer around each other, but in a very crowded moment two robots, or their labels, can briefly overlap.
 - No screen-reader description of the 3D scene itself. The same information is available in the panels, which use standard buttons, lists and tables.
@@ -427,6 +420,6 @@ The brief encourages AI tools and asks for transparency about them.
 - **Claude (Anthropic), working as a coding agent,** wrote the source code, the unit tests, the deployment workflow and this README from the assessment brief. It also ran the automated checks listed above, including the headless-browser screenshots.
 - **My role** was to set the direction and own the result:
   - I supplied the brief and the quality bar (a carefully planned, visually polished, smooth-running demo).
-  - After the first version I chose what to build next: the guided tour, live AI mode, the dashboard, mobile polish, response targets, the value panel, the audit export, consults between agents, the in-app checklist and the browser tests. I proposed making waiting work visible as stacks and picked the desk towers and pyramid from the options, and asked for a real office setting.
+  - After the first version I chose what to build next: the guided tour, live AI mode, the dashboard, mobile polish, response targets, the audit export, consults between agents, the in-app checklist and the browser tests. I proposed making waiting work visible as stacks and picked the desk towers and pyramid from the options, and asked for a real office setting.
   - I required a hard spending cap before testing with a real key, then ran live AI mode with my own key on routine, risky and fraudulent requests. Those runs found problems (the model's wait counting against the deadline, invented names and approvals, replies cut mid-word, a staged change left after a request was denied) that were then fixed.
   - I reviewed each change and tested the deployed demo in my own browser.

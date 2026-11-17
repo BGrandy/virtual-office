@@ -10,13 +10,11 @@ import { errorMessage, modelLabel, runStage, testConnection, type CallUsage } fr
 import { DEFAULT_LIMIT, EMPTY_USAGE, MAX_CONCURRENT, addUsage, canAfford, costOf, dollars, type Usage } from '../ai/budget';
 import { BUSY_MORNING } from '../sim/data';
 import { Simulation } from '../sim/engine';
-import { DEFAULT_VALUE, type ValueAssumptions } from '../sim/metrics';
 import type { AgentId, ApprovalPolicy, SimState, Task, WorkStage } from '../sim/types';
 
 const KEY = 'atrium.sim.v5';
 const SEEN_KEY = 'atrium.seen-welcome';
 const AI_KEY = 'atrium.ai';
-const VALUE_KEY = 'atrium.value';
 const USAGE_KEY = 'atrium.ai.usage';
 const QUALITY_KEY = 'atrium.quality';
 
@@ -139,7 +137,6 @@ interface UIState {
   aiError?: string;
   /** Live AI spending so far on this device. */
   usage: Usage;
-  value: ValueAssumptions;
   /** Graphics setting chosen by the viewer, and whether auto mode has dropped to light. */
   quality: Quality;
   autoLight: boolean;
@@ -167,15 +164,6 @@ export const useUI = create<UIState>((set) => ({
   tour: null,
   ai: loadAI(),
   usage: loadUsage(),
-  // Only the current assumptions are read back, so settings saved by an older version are ignored.
-  value: (() => {
-    try {
-      const saved = JSON.parse(store.get(VALUE_KEY) ?? '{}');
-      return Object.fromEntries(Object.entries(DEFAULT_VALUE).map(([k, d]) => [k, typeof saved[k] === 'number' ? saved[k] : d])) as unknown as ValueAssumptions;
-    } catch {
-      return DEFAULT_VALUE;
-    }
-  })(),
   quality: (() => {
     const q = new URLSearchParams(typeof location !== 'undefined' ? location.search : '').get('quality') ?? store.get(QUALITY_KEY);
     return q === 'full' || q === 'light' ? q : 'auto';
@@ -247,15 +235,6 @@ export const actions = {
     useUI.setState((s) => ({ tour: null, focus: null, cameraReset: s.cameraReset + 1 }));
   },
 
-  setValue: (patch: Partial<ValueAssumptions>) => {
-    const value = { ...useUI.getState().value, ...patch };
-    store.set(VALUE_KEY, JSON.stringify(value));
-    useUI.setState({ value });
-  },
-  resetValue: () => {
-    store.set(VALUE_KEY, null);
-    useUI.setState({ value: DEFAULT_VALUE });
-  },
   setQuality: (quality: Quality) => {
     store.set(QUALITY_KEY, quality === 'auto' ? null : quality);
     useUI.setState({ quality, autoLight: false });

@@ -428,17 +428,6 @@ textarea { resize: vertical; }
 .chip.chip-at-risk:not(.is-alert):not(.is-selected) { border-color: #c98a00; background: #ffedc2; }
 .chip.chip-breached:not(.is-selected) { box-shadow: 0 0 0 2px var(--alert); }
 .tiles .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
-.value { border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 12px 12px 10px; }
-.value-lead { font-size: 13.5px; line-height: 1.5; }
-.value .hint { margin-top: 6px; font-size: 12px; }
-.assumptions { margin-top: 8px; border-top: 1px solid var(--mist); padding-top: 6px; }
-.assumptions summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
-.fields { display: grid; gap: 6px; margin: 8px 0 6px; }
-.fields label { display: grid; grid-template-columns: 1fr 104px; align-items: center; gap: 8px; font-size: 12.5px; }
-.field { display: flex; align-items: center; gap: 4px; }
-.field i { font-style: normal; color: var(--ink-3); font-size: 12px; }
-.field input { padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums; }
-.value .footnote { margin-top: 8px; }
 .audit .row { margin-top: 6px; }
 .graphics { margin-top: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
 .graphics > span:first-child { font-weight: 600; }
