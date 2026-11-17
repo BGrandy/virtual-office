@@ -111,7 +111,8 @@ export function Tour() {
   const last = tour.step === STEPS.length - 1;
   const begin = () => {
     const t = actions.createTask('onboarding');
-    actions.setSpeed(2);
+    // Real time, so every step can be followed; "Speed up" is there for anyone who wants it faster.
+    actions.setSpeed(1);
     actions.tourTo(1, { taskId: t.id });
   };
   const waitingNow = step.done && task && !step.done(task);
