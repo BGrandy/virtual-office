@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AGENTS, AGENT_IDS, STAGE_META, actorName } from '../sim/data';
+import { AGENTS, AGENT_IDS, STAGE_META, STAGE_OWNER, actorName } from '../sim/data';
 import type { AgentId, Handoff, Task } from '../sim/types';
 import { actions, sim, useSim, useUI } from '../state/store';
 import { ActorChip, Pipeline, PriorityTag, SlaChip, clock, riskReason, statusText } from './bits';
@@ -29,7 +29,10 @@ function ApprovalCard({ t }: { t: Task }) {
     <section className="approval">
       <h3>Your decision is needed</h3>
       <p className="due"><SlaChip task={t} now={sim.state.time} long /></p>
-      <p className="why"><strong>Why it stopped:</strong> {(riskReason(t) ?? 'Flagged for approval').replace(/\.$/, '')}.</p>
+      {t.reworkBy === 'human' && t.humanNote && (
+        <p className="revised"><strong>Revised after your note:</strong> “{t.humanNote}” {actorName(STAGE_OWNER.execution)} made the change and {actorName(STAGE_OWNER.review)} re-checked it.</p>
+      )}
+      <p className="why"><strong>{t.reworkBy === 'human' && t.humanNote ? 'Why it still needs you:' : 'Why it stopped:'}</strong> {(riskReason(t) ?? 'Flagged for approval').replace(/\.$/, '')}.</p>
       {review && <pre className="quote">{review.body}</pre>}
       <label htmlFor="note">Note for the team (optional)</label>
       <textarea id="note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="For example: apply after 6 pm" />

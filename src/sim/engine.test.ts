@@ -192,6 +192,25 @@ describe('live AI orchestration', () => {
   });
 });
 
+describe('requesting changes', () => {
+  it('reworks the request against the note, and the review says what was checked', () => {
+    const sim = new Simulation();
+    const t = sim.createTask('onboarding');
+    run(sim, () => t.status === 'awaiting-approval');
+    sim.reject(t.id, 'Use the standard licence instead');
+    expect(t.stage).toBe('execution');
+    run(sim, () => t.status === 'awaiting-approval');
+    const reviews = t.outputs.filter((o) => o.stage === 'review');
+    const last = reviews.at(-1)!;
+    expect(last.body).toContain('Use the standard licence instead');
+    expect(last.body).not.toBe(reviews[0].body);
+    const change = t.outputs.filter((o) => o.stage === 'execution').at(-1)!;
+    expect(change.body).toContain('Use the standard licence instead');
+    sim.approve(t.id);
+    run(sim, () => t.status === 'done');
+  });
+});
+
 describe('consults', () => {
   it('lets an agent ask another a question without handing the request over', () => {
     const sim = new Simulation();

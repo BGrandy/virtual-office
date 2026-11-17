@@ -317,14 +317,25 @@ export function scriptFor(task: Task, stage: WorkStage): StageScript {
     } else s = tpl.rework.fix;
   }
   if (stage === 'review' && tpl.rework && task.rework === 0) s = tpl.rework.review;
+  // After the supervisor asks for changes, the reviewer checks the revision against that note
+  // instead of repeating its first review.
+  const revised = task.reworkBy === 'human' && !!task.humanNote;
+  if (stage === 'review' && revised) {
+    s = {
+      steps: ['Reading the supervisor\'s note', 'Checking the revision against it', 'Confirming nothing else changed'],
+      output: { title: 'Review result', body: `Revision checked against your note: "${task.humanNote}"\nThe requested change is in the revised change log\nNothing else was changed` },
+    };
+  }
   const fill = (x: string) => x.replaceAll('{title}', task.title);
   let body = fill(s.output.body);
   if (task.ruleRisk && tpl.id === 'custom') {
     if (stage === 'triage') body += `\nRisk check: ${task.ruleRisk}. This will stop for your approval.`;
     if (stage === 'planning') body += '\nRisky step: staged for approval, not applied until a person approves.';
     if (stage === 'execution') body += '\nRisky change: staged, not applied.';
-    if (stage === 'review') body = `Work matches the plan.\nNeeds a person: ${task.ruleRisk.charAt(0).toLowerCase()}${task.ruleRisk.slice(1)}.`;
+    if (stage === 'review' && !revised) body = `Work matches the plan.\nNeeds a person: ${task.ruleRisk.charAt(0).toLowerCase()}${task.ruleRisk.slice(1)}.`;
   }
+  // The reason it needs a person has not gone away, so say so plainly.
+  if (stage === 'review' && revised && task.riskReason) body += `\nStill needs your sign-off: ${task.riskReason.replace(/\.$/, '')}`;
   return { steps: s.steps.map(fill), output: { title: fill(s.output.title), body } };
 }
 

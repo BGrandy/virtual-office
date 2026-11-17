@@ -152,8 +152,8 @@ interface UIState {
 }
 
 export const isNarrow = () => typeof innerWidth !== 'undefined' && innerWidth <= 900;
-/** Tablet-sized windows: room for one side panel, so details open in place of the request list. */
-export const ONE_PANEL_MAX = 1280;
+/** Tablets and laptops: room for one side panel, so details open in place of the request list. */
+export const ONE_PANEL_MAX = 1500;
 
 export const useUI = create<UIState>((set) => ({
   rev: 0,

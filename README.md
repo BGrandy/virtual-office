@@ -100,7 +100,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Load the office | "Simulate a busy morning" sends eight mixed requests at once. Waiting work stacks into towers on the desks, and finished work builds the gold pyramid in the middle of the room. |
 | See who an agent is | Click the agent or its name tag. The right panel shows its role, current work, tray, permitted systems and recent activity. |
 | Follow a request | Click its box in the office or its row in the left panel. The right panel shows the pipeline, current owner, everything produced so far and the handoff trail. "Follow in office" makes the camera track the box. |
-| Approve or reject | When a request stops for you, a red bar appears at the bottom and the box pulses on your console. Open it, read the review, then "Approve" or "Request changes". |
+| Approve or reject | When a request stops for you, a red bar appears at the bottom and the box pulses on your console. Open it, read the review, then "Approve" or "Request changes". Changes go back to the technician with your note; the reviewer checks the revision against it and the request comes back to you, saying what changed and why it still needs you. The decision buttons stay in view however short the window. |
 | Hold, reassign, cancel | Open the request, section "Step in". |
 | Change the approval rule | Click "You" at the supervisor console. |
 | See team performance | Left panel, "Dashboard". Open "Assumptions" in the value panel to enter your own numbers. |
@@ -115,7 +115,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 | Check which version is running | "Simulated demo" badge: the version (the commit it was built from) and build time are under the graphics setting. |
 | Start over | "Simulated demo" badge, then "Reset demo". |
 
-Progress is saved in the browser, so a reload continues where you left off. The office keeps running in a background tab. On a phone, the panels open as sheets from the bottom so the office stays visible above them; drag a sheet's handle down to close it. On a tablet-sized window there is room for one side panel, so a request's details open in place of the request list ("Back to requests" returns) and the office keeps the rest of the screen.
+Progress is saved in the browser, so a reload continues where you left off. The office keeps running in a background tab. On a phone, the panels open as sheets from the bottom so the office stays visible above them; drag a sheet's handle down to close it. On a tablet or a laptop up to 1500 pixels wide there is room for one side panel, so a request's details open in place of the request list ("Back to requests" returns) and the office keeps the rest of the screen.
 
 ![The assessment checklist: every requirement of the brief, with the Interaction requirement open to show how it is met and buttons that show it in the app](docs/checklist.png)
 
@@ -279,7 +279,7 @@ flowchart LR
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
 | `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `Room.tsx` builds the walls, floor and furniture; `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 70 unit tests across the engine, consults, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
+| `*.test.ts` | 71 unit tests across the engine, consults, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
 
@@ -384,7 +384,7 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 70 unit tests
+npm test           # 71 unit tests
 npm run build      # type-check and build to dist/
 npm run test:browser   # 9 browser tests against dist/ (needs Chrome; set CHROME_PATH if it is not at /usr/bin/google-chrome)
 npm run preview    # serve the production build locally
@@ -404,9 +404,10 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 70 tests):
+- **Unit tests** (`npm test`, 71 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
+  - *Requesting changes:* the note goes back to the technician, the reviewer's second review checks the revision against it instead of repeating the first, and the request returns for approval.
   - *Consults:* an agent asks a colleague without the request changing hands, the work waits while it is away, question and answer take turns, it asks only once (not again on rework), a hold mid-conversation sends it home, it waits if the colleague is away from their desk, and the colleague stays put until the exchange ends.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
   - *AI layer:* prompts contain only the right role and context, and malformed or out-of-range answers are rejected or ignored.
@@ -426,7 +427,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
   - Live AI mode against a mocked Claude API: all five step calls in order, the request headers, outputs labelled as model-written, the cost line matching the token counts, and the key kept out of saved storage.
   - The spending limit: no call is made that could pass it, live AI switches itself off, and the steps fall back to the script.
   - A phone screen: the menu opens the request panel, dragging a sheet's handle down closes it (a short drag springs back), and the checklist fits without sideways scrolling.
-  - A tablet-sized window: a request's details open over the request list, not beside it, and "Back to requests" returns.
+  - A tablet-sized window (one-panel layout up to 1500 px wide): a request's details open over the request list, not beside it, and "Back to requests" returns.
 - **Manual checks** in the browser: screenshots inspected at desktop, tablet and phone sizes; light graphics switching on by itself on a software renderer; the value figures updating when an assumption changes; all three downloads opened and checked; and live AI mode run with a real key on routine, risky and fraudulent requests.
 - **CI** runs the type check, unit tests, build and browser tests on every push, and deploys only if all of them pass.
 
