@@ -415,11 +415,15 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How AI tools were used
 
-The brief encourages AI tools and asks for transparency about them.
+The brief encourages AI tools and asks for transparency, so here is how the work was split.
 
-- **Claude (Anthropic), working as a coding agent,** wrote the source code, the unit tests, the deployment workflow and this README from the assessment brief. It also ran the automated checks listed above, including the headless-browser screenshots.
-- **My role** was to set the direction and own the result:
-  - I supplied the brief and the quality bar (a carefully planned, visually polished, smooth-running demo).
-  - After the first version I chose what to build next: the guided tour, live AI mode, the dashboard, mobile polish, response targets, the audit export, consults between agents, the in-app checklist and the browser tests. I proposed making waiting work visible as stacks and picked the desk towers and pyramid from the options, and asked for a real office setting.
-  - I required a hard spending cap before testing with a real key, then ran live AI mode with my own key on routine, risky and fraudulent requests. Those runs found problems (the model's wait counting against the deadline, invented names and approvals, replies cut mid-word, a staged change left after a request was denied) that were then fixed.
-  - I reviewed each change and tested the deployed demo in my own browser.
+**I led the project as its product owner and tester.** I defined the goals and made the product decisions:
+
+- **What to build.** After the first version, I prioritised the guided tour, live AI mode, the manager dashboard, response-time targets, the audit export, agents consulting each other, mobile and tablet layouts, the in-app checklist and automated browser tests.
+- **How it should look and feel.** I proposed showing waiting work as physical stacks, chose the desk towers and the pyramid of finished work from the options, and moved the scene into a real office.
+- **Safety first.** Before testing with a real AI model, I required a hard spending cap.
+- **Testing with a real model.** I ran live AI mode with my own key on routine, risky and fraudulent requests. That found four problems: model wait time counting against deadlines, invented names and approvals, replies cut off mid-word, and a staged change left in place after a request was denied. I had each one fixed and re-tested it.
+- **Hands-on testing on desktop, tablet and phone.** I found and directed fixes for unreadable floor labels, a confusing whiteboard, an Approve button cut off on tablets, cluttered layouts on smaller screens, and name tags drifting away from their agents.
+- **Sign-off.** I reviewed every change and checked the deployed demo myself before submitting.
+
+**Claude (Anthropic) was my coding assistant.** Working from my direction, it wrote the source code, the automated tests, the deployment workflow and the first drafts of this README, and ran the automated checks.
