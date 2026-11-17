@@ -133,7 +133,8 @@ export function Tour() {
         {waitingNow && step.waiting && (
           <>
             <span className="tour-wait"><i className="spinner" />{step.waiting}</span>
-            {sim.state.speed < 4 && <button className="text-btn" onClick={() => actions.setSpeed(4)}>Speed up</button>}
+            {/* One step at a time: 1x to 2x, then 2x to 4x, then the button goes away. */}
+            {sim.state.speed < 4 && <button className="text-btn" onClick={() => actions.setSpeed(sim.state.speed < 2 ? 2 : 4)}>Speed up</button>}
           </>
         )}
         {waitingNow && !step.waiting && task?.status === 'awaiting-approval' && (
