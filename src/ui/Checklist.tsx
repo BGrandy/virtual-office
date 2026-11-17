@@ -287,17 +287,6 @@ const GROUPS: { title: string; items: Item[] }[] = [
         how: 'One README covers the idea, the user guide, a walkthrough, the architecture, the design decisions, the limitations and the path to production. This checklist maps each line of the brief to where it is met.',
         see: [{ label: 'Open the README', href: `${REPO}#readme` }],
       },
-      {
-        id: 'c-ai',
-        ask: 'Explain what you built, what AI assisted with, your design decisions and how you verified the result',
-        status: 'Met',
-        how: 'The README says plainly which parts an AI tool wrote and what the author directed, reviewed and tested. Separate sections cover the design decisions and how the result was verified.',
-        see: [
-          { label: 'How AI tools were used', href: readme('how-ai-tools-were-used') },
-          { label: 'How it was verified', href: readme('how-the-result-was-verified') },
-          { label: 'Design decisions', href: readme('key-design-decisions') },
-        ],
-      },
     ],
   },
 ];
