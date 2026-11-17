@@ -210,6 +210,8 @@ export class Simulation {
   }
 
   private tickAgent(a: AgentState, dt: number) {
+    // Someone who is being asked a question stays put and listens until the exchange ends.
+    if (AGENT_IDS.some((id) => { const c = this.state.agents[id].consult; return c?.with === a.id && c.phase === 'talking'; })) return;
     if (a.activity !== 'idle') a.busy += dt;
     switch (a.activity) {
       case 'idle': {
@@ -345,7 +347,13 @@ export class Simulation {
       return;
     }
     if (c.phase === 'going') {
-      if (!this.walk(a, dt)) return;
+      if (a.path.length > 0 && !this.walk(a, dt)) return;
+      // The colleague may have left on a handoff while we walked over: wait beside their desk.
+      if (other!.activity !== 'idle' && other!.activity !== 'working') {
+        const say = `Waiting for ${AGENTS[c.with].name}`;
+        if (a.say !== say) { a.say = say; this.dirty = true; }
+        return;
+      }
       c.phase = 'talking';
       c.until = this.state.time + TALK_TIME;
       c.answerAt = this.state.time + TALK_TIME / 2;

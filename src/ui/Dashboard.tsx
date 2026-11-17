@@ -11,6 +11,39 @@ import { duration } from './bits';
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const secs = duration;
 
+/**
+ * A number box you can clear and retype. While typing it holds whatever you typed;
+ * the figure updates as soon as the text is a number in range, and leaving the box
+ * snaps anything else back into range.
+ */
+function NumField({ id, min, max, step, value, onCommit }: { id: string; min: number; max: number; step: number; value: number; onCommit: (n: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      id={`val-${id}`}
+      min={min}
+      max={max}
+      step={step}
+      value={draft ?? value}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        const n = Number(e.target.value);
+        if (e.target.value !== '' && Number.isFinite(n) && n >= min && n <= max) onCommit(n);
+      }}
+      onBlur={() => {
+        if (draft !== null && draft !== '') {
+          const n = Number(draft);
+          if (Number.isFinite(n)) onCommit(Math.min(max, Math.max(min, n)));
+        }
+        setDraft(null);
+      }}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+    />
+  );
+}
+
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="tile">
@@ -89,7 +122,7 @@ function ValuePanel() {
             A person spends about <strong>{v.humanMinutesPerRequest.toFixed(1)} min</strong> per request instead of <strong>{a.manualMinutes} min</strong>.
             At {a.requestsPerDay} requests a day that frees about <strong>{hours(v.monthlyHours)}</strong> a month, worth roughly <strong>{money(v.monthlyCost)}</strong>.
           </p>
-          <p className="hint">So far this run: {v.completed} requests, {v.touches} times you stepped in, {hours(v.savedHoursRun)} saved.</p>
+          <p className="hint">So far this run: {v.completed} {v.completed === 1 ? 'request' : 'requests'}, {v.touches} {v.touches === 1 ? 'time' : 'times'} you stepped in, {hours(v.savedHoursRun)} saved.</p>
         </>
       ) : (
         <p className="empty">Complete a request to see the estimate.</p>
@@ -102,18 +135,7 @@ function ValuePanel() {
               <span>{f.label}</span>
               <span className="field">
                 {f.unit === '$' && <i>$</i>}
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={f.min}
-                  max={f.max}
-                  step={f.step}
-                  value={a[f.key]}
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    if (Number.isFinite(n)) actions.setValue({ [f.key]: Math.min(f.max, Math.max(f.min, n)) });
-                  }}
-                />
+                <NumField id={f.key} min={f.min} max={f.max} step={f.step} value={a[f.key]} onCommit={(n) => actions.setValue({ [f.key]: n })} />
                 {f.unit && f.unit !== '$' && <i>{f.unit}</i>}
               </span>
             </label>

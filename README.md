@@ -37,6 +37,7 @@ A browser-based 3D office where five AI agents work an IT support queue as a tea
 13. [How the result was verified](#how-the-result-was-verified)
 14. [Limitations](#limitations)
 15. [How AI tools were used](#how-ai-tools-were-used)
+16. [Project structure](#project-structure)
 
 ## The problem and the idea
 
@@ -92,7 +93,7 @@ The business case in one line: people stop doing the routine 80 percent and keep
 
 | To do this | Do this |
 |---|---|
-| Look around | Mouse: drag to orbit, scroll to zoom, right-drag to move. Touch: drag to orbit, pinch to zoom, two-finger drag to move. The on-screen hint shows whichever applies. "Reset view" returns to the overview. |
+| Look around | Mouse: drag to orbit, scroll to zoom, right-drag to move. Touch: drag to orbit, pinch to zoom, two-finger drag to move. On desktops and tablets the on-screen hint shows whichever applies. "Reset view" returns to the overview. |
 | Learn it in two minutes | Welcome screen, "Take the tour". Reopen it any time from "Guide". |
 | Start a request | Left panel, "Start a request". Pick one of four scenarios or type your own. |
 | Check it against the brief | "Checklist" in the top bar lists each requirement of the assessment brief. Select one to see how it is met, with a button that shows it in the app or opens the matching README section. Direct link: add `?checklist` to the URL. |
@@ -278,7 +279,7 @@ flowchart LR
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
 | `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `Room.tsx` builds the walls, floor and furniture; `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
-| `*.test.ts` | 69 unit tests across the engine, consults, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
+| `*.test.ts` | 70 unit tests across the engine, consults, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
 
@@ -321,7 +322,7 @@ In live AI mode the engine asks for a model result when an agent starts a step, 
 | **GitHub Pages and Actions** | Free hosting. The included workflow runs the tests, builds and deploys on every push. |
 | **No backend** | The brief allows mock data. A static site has nothing to go down during a review, and costs nothing. |
 | **No 3D model files** | Everything is built from primitive shapes in code, so the page loads fast and there are no asset licences to track. |
-| **Code splitting** | three.js is loaded as a separate chunk, so the panels and welcome screen appear after about 95 KB (compressed) instead of 340 KB. |
+| **Code splitting** | three.js is loaded as a separate chunk, so the panels and welcome screen appear after about 117 KB (compressed) instead of about 377 KB. |
 | **Anthropic Messages API, called from the browser** | Lets the live mode work on a static site with no server and no shared key. The user's key never leaves their browser except to the API. |
 
 ## How this becomes a production system
@@ -383,7 +384,7 @@ Requires Node 20 or newer.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 69 unit tests
+npm test           # 70 unit tests
 npm run build      # type-check and build to dist/
 npm run test:browser   # 9 browser tests against dist/ (needs Chrome; set CHROME_PATH if it is not at /usr/bin/google-chrome)
 npm run preview    # serve the production build locally
@@ -403,10 +404,10 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 ## How the result was verified
 
-- **Unit tests** (`npm test`, 69 tests):
+- **Unit tests** (`npm test`, 70 tests):
   - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
   - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
-  - *Consults:* an agent asks a colleague without the request changing hands, the work waits while it is away, question and answer take turns, it asks only once (not again on rework), a hold mid-conversation sends it home, and it waits if the colleague is away from their desk.
+  - *Consults:* an agent asks a colleague without the request changing hands, the work waits while it is away, question and answer take turns, it asks only once (not again on rework), a hold mid-conversation sends it home, it waits if the colleague is away from their desk, and the colleague stays put until the exchange ends.
   - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
   - *AI layer:* prompts contain only the right role and context, and malformed or out-of-range answers are rejected or ignored.
   - *Risk rules:* the classic risky requests are flagged and routine ones are not (including "everyone's jobs are stuck"), a flagged typed request stops for approval without a model, a live model calling it safe cannot override the rule, and built-in scenarios are untouched.

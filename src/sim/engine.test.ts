@@ -218,6 +218,20 @@ describe('consults', () => {
     expect(t.history.map((h) => h.from)).toEqual(['iris', 'atlas', 'bolt', 'sage', 'echo']);
   });
 
+  it('keeps the colleague at their desk until the exchange ends, even with work to hand off', () => {
+    const sim = new Simulation();
+    sim.createTask('lockout');
+    sim.createTask('lockout'); // keeps Iris busy while Bolt comes to ask
+    let left = false;
+    run(sim, () => {
+      const talking = sim.state.agents.bolt.consult?.phase === 'talking';
+      if (talking && sim.state.agents.iris.activity !== 'idle' && sim.state.agents.iris.activity !== 'working') left = true;
+      return sim.state.tasks.every((t) => t.status === 'done');
+    });
+    expect(left).toBe(false);
+    expect(sim.state.tasks.every((t) => t.consults?.length === 1)).toBe(true);
+  });
+
   it('does not ask again on a rework pass', () => {
     const sim = new Simulation();
     const t = sim.createTask('phishing');
