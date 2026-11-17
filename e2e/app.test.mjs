@@ -180,16 +180,21 @@ describe('phone', () => {
     await click(page, 'Dashboard', '[role=tab]');
     // The bar at the top of a sheet is a real handle: a short drag springs back, a long one closes it.
     const drag = async (distance) => {
+      // Let any spring-back animation finish first, so the handle is where it will be touched.
+      await new Promise((r) => setTimeout(r, 500));
       const [x, y] = await page.evaluate(() => { const r = document.querySelector('.panel .sheet-handle').getBoundingClientRect(); return [r.x + r.width / 2, r.y + 10]; });
       await page.touchscreen.touchStart(x, y);
-      for (let d = 0; d <= distance; d += 10) await page.touchscreen.touchMove(x, y + d);
+      for (let d = 10; d <= distance; d += 10) {
+        await page.touchscreen.touchMove(x, y + d);
+        await new Promise((r) => setTimeout(r, 16)); // one frame per step, like a finger
+      }
       await new Promise((r) => setTimeout(r, 700)); // slow enough not to count as a flick
       await page.touchscreen.touchEnd();
     };
     await drag(30);
     await waitFor(page, () => !!document.querySelector('.panel.left') && !document.querySelector('.panel.left').style.transform, () => 'sheet did not spring back after a short drag');
     await drag(160);
-    await waitFor(page, () => !document.querySelector('.panel.left'), () => 'sheet did not close after a long drag');
+    await waitFor(page, () => !document.querySelector('.panel.left'), () => `sheet did not close after a long drag (panel transform: ${document.querySelector('.panel.left')?.style.transform || 'none'})`);
     await page.goto(page.url().replace('?quality=light', '?quality=light&checklist'), { waitUntil: 'load' });
     await page.waitForFunction(() => !!document.querySelector('.dialog'));
     assert.equal(await page.evaluate(() => { const d = document.querySelector('.dialog'); return d.scrollWidth - d.clientWidth; }), 0, 'no sideways scrolling');
