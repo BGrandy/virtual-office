@@ -12,13 +12,10 @@ A browser-based 3D office where five AI agents work an IT support queue as a tea
 
 **Highlights**
 
-- **Guided tour.** Two minutes, one request from arrival to closed, with the camera moving to each agent as it works and a short note explaining each step.
-- **Live AI mode (optional).** Paste a Claude API key and every agent's step becomes a real model call. Type any IT request and watch it get triaged, planned, executed, reviewed and answered. The workflow engine, not the model, decides who gets the work next.
-- **Manager dashboard.** Where each request's time goes (waiting vs working, per step), which desk is the bottleneck right now, how often people had to step in, and a plain-language recommendation.
-- **Human in charge.** Risky work stops for approval. The supervisor can approve, send back with a note, hold, reassign or cancel anything at any time.
-- **Response-time targets.** Every request has a deadline set by its priority, a live countdown, and an alert before it is missed. Queues are worked earliest-deadline-first.
-- **Business value and audit.** The dashboard turns the run into hours and cost saved using assumptions you can edit, and every request's full history downloads as JSON or CSV.
-- **Runs on modest laptops.** On a weak or software-only graphics chip, or if motion gets choppy, it switches itself to a lighter mode.
+- **Watch the work move.** Each request is a box carried from desk to desk, so you always see who owns it, where work is piling up and what is waiting on you. A two-minute guided tour shows one request from arrival to closed.
+- **Human in charge.** Risky work stops for your approval, and you can send back, hold, reassign or cancel anything.
+- **Built for a real team.** Response-time targets, a manager dashboard that names the bottleneck, an editable estimate of hours saved, and a full audit export.
+- **Optional live AI.** With your own Claude API key, a real model does each agent's step, under a hard spending cap. The workflow engine, not the model, decides what happens next.
 
 ## Contents
 
@@ -37,7 +34,6 @@ A browser-based 3D office where five AI agents work an IT support queue as a tea
 13. [How the result was verified](#how-the-result-was-verified)
 14. [Limitations](#limitations)
 15. [How AI tools were used](#how-ai-tools-were-used)
-16. [Project structure](#project-structure)
 
 ## The problem and the idea
 
@@ -83,9 +79,7 @@ Agents also ask each other questions. Partway through a step, the owner can walk
 - **Cancel it.** The agent drops it immediately.
 - **Change the approval rule** between "risky work only" and "every task". A new team starts cautious and loosens the rule as trust builds.
 
-**Afterwards.** Every request keeps its full trail: who had it, when it changed hands, what each agent produced and what the human decided. That is the audit record.
-
-**End of the week.** The lead opens the dashboard. It shows that most of each request's time is spent waiting for approval, not working, and that the technician's desk is where queues build. That turns into two concrete decisions: widen the approval rule for one low-risk request type, and add a second technician agent. The value panel, filled in with the team's own numbers, gives the hours and cost saved for the monthly report, and the request export goes to whoever audits changes.
+**End of the week.** Every request has kept its full trail (who had it, when it changed hands, what each agent produced, what the human decided), and the export goes to whoever audits changes. The dashboard shows that most time is spent waiting for approval and that queues build at the technician's desk, which turns into two decisions: widen the approval rule for one low-risk request type, and add a second technician agent. The value panel, filled in with the team's own numbers, gives the hours and cost saved for the monthly report.
 
 The business case in one line: people stop doing the routine 80 percent and keep control of the risky 20 percent, with a view that makes the handover between the two obvious.
 
@@ -93,29 +87,21 @@ The business case in one line: people stop doing the routine 80 percent and keep
 
 | To do this | Do this |
 |---|---|
-| Look around | Mouse: drag to orbit, scroll to zoom, right-drag to move. Touch: drag to orbit, pinch to zoom, two-finger drag to move. On desktops and tablets the on-screen hint shows whichever applies. "Reset view" returns to the overview. |
-| Learn it in two minutes | Welcome screen, "Take the tour". Reopen it any time from "Guide". |
-| Start a request | Left panel, "Start a request". Pick one of four scenarios or type your own. |
-| Check it against the brief | "Checklist" in the top bar lists each requirement of the assessment brief. Select one to see how it is met, with a button that shows it in the app or opens the matching README section. Direct link: add `?checklist` to the URL. |
-| Load the office | "Simulate a busy morning" sends eight mixed requests at once. Waiting work stacks into towers on the desks, and finished work builds the gold pyramid in the middle of the room. |
-| See who an agent is | Click the agent or its name tag. The right panel shows its role, current work, tray, permitted systems and recent activity. |
-| Follow a request | Click its box in the office or its row in the left panel. The right panel shows the pipeline, current owner, everything produced so far and the handoff trail. "Follow in office" makes the camera track the box. |
-| Approve or reject | When a request stops for you, a red bar appears at the bottom and the box pulses on your console. Open it, read the review, then "Approve" or "Request changes". Changes go back to the technician with your note; the reviewer checks the revision against it and the request comes back to you, saying what changed and why it still needs you. The decision buttons stay in view however short the window. |
-| Hold, reassign, cancel | Open the request, section "Step in". |
+| Look around | Mouse: drag to orbit, scroll to zoom, right-drag to move. Touch: drag, pinch, two-finger drag. "Reset view" returns to the overview. |
+| Learn it in two minutes | Welcome screen, "Take the tour". Reopen it from "Guide". |
+| Start a request | Left panel, "Start a request": one of four scenarios, or type your own. |
+| Load the office | "Simulate a busy morning" sends eight mixed requests at once. |
+| See an agent or a request | Click the agent, or a request's box or row. The details panel shows the agent's role, work and tray, or the request's pipeline, owner, outputs and history. "Follow in office" makes the camera track it. |
+| Approve or reject | A red bar appears and the box pulses on your console. Open it, read the review, then "Approve" or "Request changes" with a note. Changes go back to the technician, are re-reviewed against your note, and return to you. |
+| Hold, reassign, cancel | Open the request, "Step in". |
 | Change the approval rule | Click "You" at the supervisor console. |
-| See team performance | Left panel, "Dashboard". Open "Assumptions" in the value panel to enter your own numbers. |
-| Check deadlines | Every request shows "Due in…", which turns amber when at risk and red when late. |
-| Export a request's history | Open the request, "Audit record", then "Download JSON" or "Download CSV". All requests: Dashboard, "Download all requests (CSV)". |
-| Change graphics quality | Top bar badge ("What's real?"), then Graphics: Auto, Full or Light. Or add `?quality=light` to the URL. |
-| Read the full log | Left panel, "Log". Click any line to jump to that request. |
-| Use a real model | Top bar, "Connect AI". Each request then shows what its model calls cost. See [Live AI mode](#live-ai-mode). |
-| Control time | Top bar: Pause, 1x, 2x, 4x. |
-| See what is simulated | Top bar, "Simulated demo" badge. |
-| Tidy up a long session | Left panel, "Clear finished" next to the Finished heading. Removes completed and cancelled requests from the list, the pile and the dashboard; requests in progress stay. |
-| Check which version is running | "Simulated demo" badge: the version (the commit it was built from) and build time are under the graphics setting. |
-| Start over | "Simulated demo" badge, then "Reset demo". |
+| See team performance | Left panel, "Dashboard". Open "Assumptions" to enter your own numbers. |
+| Export | Open a request, "Audit record", "Download JSON" or "Download CSV". All requests: on the Dashboard. |
+| Check it against the brief | "Checklist" in the top bar, or add `?checklist` to the URL. Each requirement says how it is met and links to it. |
+| Use a real model | "Connect AI" in the top bar. See [Live AI mode](#live-ai-mode). |
+| Time, graphics, version, reset | Pause, 1x, 2x, 4x in the top bar. The "Simulated demo" badge opens what is real, the graphics setting (or `?quality=light`), the build version and "Reset demo". "Clear finished" in the left panel tidies a long session. |
 
-Progress is saved in the browser, so a reload continues where you left off. The office keeps running in a background tab. On a phone, the panels open as sheets from the bottom so the office stays visible above them; drag a sheet's handle down to close it. On a tablet or a laptop up to 1500 pixels wide there is room for one side panel, so a request's details open in place of the request list ("Back to requests" returns) and the office keeps the rest of the screen.
+Progress is saved in the browser and the office keeps running in a background tab. Layout adapts to the screen: two side panels on a wide screen; up to 1500 px wide, a request's details open over the request list ("Back to requests" returns); on a phone, panels are bottom sheets you drag down to close.
 
 ![The assessment checklist: every requirement of the brief, with the Interaction requirement open to show how it is met and buttons that show it in the app](docs/checklist.png)
 
@@ -136,10 +122,10 @@ Choose **Take the tour** on the welcome screen. It sends the new-hire request an
 2. **Plan.** Atlas matches the Finance onboarding runbook, writes five steps and flags step 4 (admin-tier licence) as needing approval. Walks it to Bolt.
 3. **Execute.** Bolt creates the account, adds groups, enrols the laptop and stages the licence without applying it. Walks it to Sage.
 4. **Review.** Sage checks each step against the change log, confirms MFA and disk encryption, and decides a person must sign off the licence. Walks it to the supervisor console.
-5. **Approve.** Everything stops. The box turns red on your console, the top bar shows "Need you: 1", and the approval card is highlighted. You approve, or request changes with a note.
+5. **Approve.** Everything stops. The box turns red on your console, a red bar appears at the bottom of the screen, and the approval card is highlighted. You approve, or request changes with a note.
 6. **Complete.** The box moves to Echo, who writes the reply to HR, closes the ticket and carries the box to the middle of the room, where it turns gold and joins the pyramid.
 
-At each step the right panel adds the agent's output and a line in its History. While an agent carries a request, a dashed arc shows where it is going: the carrier's colour for a normal handoff, gold when it is going to you, red when it is being sent back.
+At each step the details panel adds the agent's output and a line in its History. While an agent carries a request, a dashed arc shows where it is going: the carrier's colour for a normal handoff, gold when it is going to you, red when it is being sent back, and dark navy when a finished request goes to the pile.
 
 ![The tour at the approval step](docs/approval.png)
 
@@ -186,7 +172,7 @@ Off by default. Click **Connect AI**, paste an Anthropic API key, pick a model (
 | The model can | The engine enforces |
 |---|---|
 | Set the priority at triage | Priority only reorders queues |
-| Call a request safe | Fixed risk rules still stop requests that mention admin rights, sign-in security, deleting data, firewall changes, executive impersonation or changes for everyone |
+| Call a request safe | Fixed risk rules still stop requests that mention admin rights, sign-in security, deleting data, firewall changes, payments or payroll, executive impersonation or changes for everyone |
 | Flag the plan as risky | Risky work always stops for a person |
 | Pass, request changes or escalate at review | One round of changes at most, then it goes to a person instead of looping |
 | Write every output | A malformed answer or failed call falls back to the scripted step, and the log says so |
@@ -195,11 +181,11 @@ A model can never skip review, approve its own work or change who owns a task. T
 
 **What stays simulated.** No real system is connected. The prompt tells the model it has no system access and should describe what it would do, so change logs describe actions rather than perform them.
 
-**The key.** It is sent only from your browser to `api.anthropic.com`, using the API's opt-in header for direct browser calls. There is no Atrium server. By default it is kept for the current tab only; "Remember on this device" is opt-in. One request makes five short calls, a fraction of a cent with Haiku.
+**The key.** It goes only from your browser to `api.anthropic.com`, using the API's opt-in header for direct browser calls; there is no Atrium server. It is kept for the current tab unless you tick "Remember on this device".
 
-**Spending limit.** Live mode has a hard cap on this device: $0.10, $0.25 (default) or $1.00. Every call's real token use (from the API response) is priced at the published rates and added up. Before each call, the app checks that even a worst-case call (largest possible prompt, full 900-token answer) cannot take the total past the limit; if it could, the call is not made, live AI switches itself off, and that step uses its script, labelled with the reason. The counter survives reloads and new tabs and can be reset. Each request also shows its own cost, and the audit export includes it. At most three calls run at once, and "Simulate a busy morning" asks before sending eight requests in live mode. With Haiku, one request costs roughly a fifth of a cent, so the default limit covers well over a hundred requests. This is an estimate; the Console's billing page is the real record, and a spend limit there is the account-level backstop.
+**Spending limit.** A hard cap on this device: $0.10, $0.25 (default) or $1.00. Each call's real token use is priced at published rates, and before every call the app checks that even a worst-case call (largest prompt, full 900-token answer) cannot pass the cap. If it could, the call is not made, live AI switches off, and the step uses its script, labelled with the reason. At most three calls run at once, and a busy morning asks first. With Haiku a request costs roughly a fifth of a cent, which each request shows in its details and audit export. The Console's billing page remains the real record.
 
-**Honest scope.** The automated checks run this path end to end against a mocked API that returns realistic tool calls, covering the request format, headers, model ID and response parsing. I also ran it by hand with a real key on routine, risky and fraudulent requests, and fixed what those runs exposed (for example, time spent waiting on the model no longer counts against the response target).
+**Testing.** Automated checks run this path against a mocked API (request format, headers, model ID, parsing). I also ran it with a real key on routine, risky and fraudulent requests and fixed what those runs exposed.
 
 ![A request worked by a live model](docs/live-ai.png)
 
@@ -279,6 +265,7 @@ flowchart LR
 | `src/state/store.ts` | Owns the engine instance, runs the tick loop (including in a background tab), dispatches live AI calls, saves to browser storage, holds UI-only state (selection, camera focus, tour, dialogs, AI settings). |
 | `src/scene/` | The 3D view, loaded as a separate chunk. Reads engine state every frame. Contains no workflow rules. `Room.tsx` builds the walls, floor and furniture; `boxLayout.ts` decides where every request box sits (desk towers, console, carried, pyramid); `Quality.tsx` picks the graphics level. |
 | `src/ui/` | Panels, dashboard, tour, inspector, dialogs and the labels that float over the scene. |
+| `e2e/` | Browser tests: the built site in headless Chrome, with the Claude API mocked. |
 | `*.test.ts` | 71 unit tests across the engine, consults, the live AI rules, prompt building, response parsing, response-time targets, the dashboard figures, the value estimate, the exports and the box layout. |
 
 ### Task flow
@@ -318,7 +305,7 @@ In live AI mode the engine asks for a model result when an agent starts a step, 
 | **three.js with React Three Fiber** | Lets the 3D scene be written as components beside the rest of the UI. No game engine or plugin to install. |
 | **Zustand** | A few lines for UI state. Redux would be more ceremony than this needs. |
 | **Vite** | Fast dev server and a static build that any free host can serve. |
-| **Vitest** | Runs the engine tests in under a second with no browser. |
+| **Vitest** | Runs the engine tests in about a second with no browser. |
 | **GitHub Pages and Actions** | Free hosting. The included workflow runs the tests, builds and deploys on every push. |
 | **No backend** | The brief allows mock data. A static site has nothing to go down during a review, and costs nothing. |
 | **No 3D model files** | Everything is built from primitive shapes in code, so the page loads fast and there are no asset licences to track. |
@@ -358,28 +345,21 @@ flowchart TB
 
 ## Key design decisions
 
-- **Ownership is physical.** A task has one location and so one owner. This removes the most common confusion in multi-agent views.
-- **The human is drawn as a person, on a raised platform, in a different colour.** The approval step should look different from the automated steps because it is different.
-- **Work you can count at a glance.** Waiting requests stack into a tower on the owner's desk. The next one is at the bottom, so when it is taken the tower drops a level, Jenga-style. The taller the tower, the more it sways, and once it is tall the agent starts glancing up at it nervously (and eventually sweating). Ten boxes are shown; a tag on the front of the desk gives the full count. Finished requests are carried to the middle of the room and turn gold as they build a pyramid: filled from the bottom up so no box floats, and rebuilt one size larger when it outgrows its base. It grows wider faster than taller, so even 500 requests stay on screen. The placement rules are unit-tested.
-- **It looks like an office, and the walls never get in the way.** Wood floor, three walls with windows onto a city view, a whiteboard sketch of the workflow, a sofa, bookshelf, printer and water cooler. The front is open to the camera, and any wall you orbit behind hides itself.
-- **The room is a horseshoe in workflow order.** Work moves left to right around it, so position tells you progress. Floor numbers match the pipeline in the side panel.
-- **Labels that stay small.** Each agent has one compact label: its name, and under it either its role or, while it works, what it is doing right now with a progress bar. Only a conversation between two agents gets a speech bubble. Waiting counts sit on the front of the desk, not over the agent's head. A busy office used to stack three labels above each robot; now it cannot.
-- **Three ways to read the same state.** The room for a glance, the request list for the queue, the inspector for detail. All three are driven by the same engine state, so they cannot disagree.
-- **Blocked on a human is the loudest thing on screen.** Red is used only for that and for rework.
-- **Disclosure is built in.** A permanent badge in the top bar and a note on each agent, not just a line in this file.
-- **Scenarios were chosen to cover the paths.** Straight through, approval gate, rework loop and priority, so a reviewer can see each behaviour in about a minute.
-- **Colours were checked, not picked by eye.** Each agent has one colour, used on its robot, desk, floor marker and name tag. The five were chosen and ordered with a colour-blindness validator so that neighbouring desks stay distinguishable for common colour vision deficiencies. Agents are always named as well, so colour is never the only cue. Request boxes are neutral so they never borrow an agent's colour. Red means it needs you; gold marks you and the finished pile.
-- **Fixed rules under AI judgement.** Every typed request is screened by plain keyword rules before any agent sees it. A match always stops for a person, whether the agents are scripted or a live model has decided the work is safe. Without a key this keeps a typed "give John admin access" from sailing through; with a key it is a safety net the model cannot talk its way past.
-- **The model proposes, the engine decides.** Live AI changes who writes the work, not who controls the workflow. That boundary is the main thing I would keep in production.
-- **The tour follows the simulation.** Each step waits for a real event instead of a timer, so it cannot drift out of sync, and it still works if you send the request back instead of approving it.
-- **Earliest deadline first, not strict priority.** Strict priority can leave low-priority work waiting forever on a busy day. Ordering by deadline still puts urgent work first, because its deadline is shortest.
-- **It degrades instead of stuttering.** A reviewer may open the link on a work laptop with basic graphics. The app checks the graphics chip and the frame rate, and drops shadows and resolution rather than playing choppily. The viewer can override it.
-- **Value is shown with its assumptions.** The saving figure sits next to the inputs that produced it, labelled as an estimate, so it can be challenged and adjusted rather than taken on faith.
-- **The dashboard says what to do, not only what happened.** A rule-based sentence names the bottleneck and the action, because a manager glancing at charts wants the conclusion first.
+- **Ownership is physical.** A task has one location and so one owner, which removes the most common confusion in multi-agent views.
+- **The room is a horseshoe in workflow order.** Work moves left to right, so position tells you progress, and the floor numbers match the pipeline on every request.
+- **Work you can count at a glance.** Waiting requests stack into a tower on the owner's desk (ten shown, the full count on the desk front); tall towers sway and make the agent nervous. Finished requests build a gold pyramid in the middle that stays on screen even at 500. The placement rules are unit-tested.
+- **The human looks different because the step is different.** The supervisor is drawn as a person on a raised platform, and red is used only for "needs you" and rework.
+- **Labels stay small.** Each agent has one label: its name, with its role or current step under it. Only a conversation between two agents gets a speech bubble.
+- **It looks like an office.** Walls, windows, a whiteboard of the workflow and furniture; the front is open, and any wall you orbit behind hides itself.
+- **Three views of one state.** The room for a glance, the list for the queue, the details panel for depth, all driven by the same engine state so they cannot disagree.
+- **Colours were checked, not picked by eye.** The five agent colours were ordered with a colour-blindness validator, and every agent is also named, so colour is never the only cue.
+- **The model proposes, the engine decides.** Fixed rules sit under any AI judgement; this is the boundary I would keep in production.
+- **It degrades instead of stuttering.** On a weak graphics chip or a low frame rate it drops shadows and resolution; the viewer can override it.
+- **Numbers come with their reasoning.** The dashboard leads with a plain-language finding, and the value figure sits beside the assumptions that produced it.
 
 ## Run, test and deploy
 
-Requires Node 20 or newer.
+Requires Node 20.19 or newer (CI uses Node 22).
 
 ```bash
 npm install
@@ -405,29 +385,23 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 ## How the result was verified
 
 - **Unit tests** (`npm test`, 71 tests):
-  - *Workflow:* a request running end to end, the approval gate, supervisor rejection with the note attached, the rework loop, the "every task" rule, hold and resume, reassignment, priority ordering, cancel, and save and restore mid-handoff.
-  - *Busy office:* eight mixed requests clearing with agents crossing paths, no deadlock, and everyone back at their desk.
-  - *Requesting changes:* the note goes back to the technician, the reviewer's second review checks the revision against it instead of repeating the first, and the request returns for approval.
-  - *Consults:* an agent asks a colleague without the request changing hands, the work waits while it is away, question and answer take turns, it asks only once (not again on rework), a hold mid-conversation sends it home, it waits if the colleague is away from their desk, and the colleague stays put until the exchange ends.
-  - *Live AI rules (with a fake model):* outputs are used and labelled, priority and risk flags are applied, the one-rework limit escalates, a model "pass" cannot skip the approval gate on risky work, and failures fall back to the script.
-  - *AI layer:* prompts contain only the right role and context, and malformed or out-of-range answers are rejected or ignored.
-  - *Risk rules:* the classic risky requests are flagged and routine ones are not (including "everyone's jobs are stuck"), a flagged typed request stops for approval without a model, a live model calling it safe cannot override the rule, and built-in scenarios are untouched.
-  - *Spending guard:* pricing from published rates, usage adds up, a call that could cross the limit is refused, and 10,000 attempted calls never overspend.
-  - *Dashboard:* autonomy share, the waiting/working split, and that the recommendation names a pile-up and slow approvals.
-  - *Response targets:* on track to at risk to breached, a single breach event, met and missed on completion, earliest-deadline-first ordering, and the recommendation putting an at-risk request first.
-  - *Value and export:* the value arithmetic, no negative savings, the full audit trail, and CSV quoting including formula-like text.
-  - *Box layout:* towers show ten boxes and count the rest, the next request is at the bottom, taller towers sway more, the pyramid never leaves a box floating (checked for several sizes), 500 completed requests stay under 3.2 m tall and on the plinth, and the pyramid is ordered by completion time.
+
+  | Area | What the tests prove |
+  |---|---|
+  | Workflow | A request end to end; the approval gate; rejection with a note, re-reviewed against that note; the rework loop; the "every task" rule; hold, reassign, cancel; priority order; save and restore mid-handoff; eight mixed requests clearing with no deadlock |
+  | Consults | The request never changes hands; work waits while the owner is away; question and answer take turns; asked once only; a hold sends the owner home; the colleague stays put until the exchange ends |
+  | Live AI (fake model) | Outputs used and labelled; priority and risk applied; one rework then escalation; a model "pass" cannot skip approval; failures fall back to the script |
+  | AI layer and risk rules | Prompts carry only the right context; malformed answers are rejected; risky requests are flagged and routine ones are not; a model cannot override a rule |
+  | Spending guard | Published pricing; a call that could cross the cap is refused; 10,000 attempts never overspend |
+  | Dashboard, targets, value, export | The figures and recommendation; on track to at risk to breached; one breach event; the value arithmetic; the audit trail; CSV formula-injection guard |
+  | Box layout | Towers show ten and count the rest; the pyramid never floats a box and stays under 3.2 m at 500 requests |
+
 - **Type checking** runs with TypeScript strict mode as part of every build.
 - **Browser tests** (`npm run test:browser`, 9 tests in `e2e/`). The built site in headless Chrome, using the app the way a person would, with the simulation fast-forwarded:
-  - The guided tour from the first request to the end, including the approval step.
-  - The checklist opened from its direct link, with every requirement having an explanation and a way to see it.
-  - A busy morning cleared with approvals, every agent back at its desk, then the dashboard finding, chart tooltip and table view.
-  - A consult: the question shown over one robot, then the answer over the other, then the exchange in the request's history.
-  - Clearing finished requests while keeping the one in progress.
-  - Live AI mode against a mocked Claude API: all five step calls in order, the request headers, outputs labelled as model-written, the cost line matching the token counts, and the key kept out of saved storage.
-  - The spending limit: no call is made that could pass it, live AI switches itself off, and the steps fall back to the script.
-  - A phone screen: the menu opens the request panel, dragging a sheet's handle down closes it (a short drag springs back), and the checklist fits without sideways scrolling.
-  - A tablet-sized window (one-panel layout up to 1500 px wide): a request's details open over the request list, not beside it, and "Back to requests" returns.
+  - The guided tour, including approval; the checklist from its direct link.
+  - A busy morning cleared, then the dashboard finding, tooltip and table; a consult shown and recorded; clearing finished requests.
+  - Live AI against a mocked API: five calls in order, headers, model labels, the cost line, the key kept out of storage; and the spending cap switching live AI off.
+  - Phone (the menu, swipe-to-close sheets, no sideways scrolling) and tablet (details open over the request list).
 - **Manual checks** in the browser: screenshots inspected at desktop, tablet and phone sizes; light graphics switching on by itself on a software renderer; the value figures updating when an assumption changes; all three downloads opened and checked; and live AI mode run with a real key on routine, risky and fraudulent requests.
 - **CI** runs the type check, unit tests, build and browser tests on every push, and deploys only if all of them pass.
 
@@ -435,7 +409,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 
 - Without an API key, agents are scripted, and typed requests get generic output (risky ones still stop for approval through the risk rules).
 - The risk rules are keyword-based, so they can miss a risky request worded in an unusual way, or occasionally flag a harmless one. In live mode the model's own judgement sits on top of them.
-- Live AI answers vary from run to run, so live runs are less predictable than the scripted ones, which is why scripted is the default for a demo. The automated checks for live mode use a mocked API; real-key runs were done by hand.
+- Live AI answers vary from run to run, which is why scripted is the default for a demo. Automated checks for live mode use a mocked API; real-key runs were done by hand.
 - Your API key sits in the browser while live mode is on. Fine for a demo with your own key; a production version would keep keys on a server.
 - No real IT systems or tools are connected in either mode.
 - One browser, one user. There is no server, login or shared view.
@@ -443,7 +417,7 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 - Dashboard times and response targets are simulated seconds, compressed about 60 times from a real desk.
 - The value figure is an estimate from assumptions, not measured savings.
 - Needs WebGL. Without it the panels still work but the 3D office does not appear.
-- Agents steer around each other, but in a very crowded moment two can briefly overlap.
+- Agents steer around each other, but in a very crowded moment two robots, or their labels, can briefly overlap.
 - No screen-reader description of the 3D scene itself. The same information is available in the panels, which use standard buttons, lists and tables.
 
 ## How AI tools were used
@@ -451,18 +425,8 @@ The build uses relative paths, so it also works unchanged on Netlify, Vercel or 
 The brief encourages AI tools and asks for transparency about them.
 
 - **Claude (Anthropic), working as a coding agent,** wrote the source code, the unit tests, the deployment workflow and this README from the assessment brief. It also ran the automated checks listed above, including the headless-browser screenshots.
-- **My role** was to set the direction and own the result. I supplied the brief and the quality bar (a carefully planned, visually polished, smooth-running demo). After the first version I chose what to build next: the guided tour, live AI mode, the dashboard, mobile polish, response targets, the value panel, the audit export, consults between agents, the in-app checklist and the browser tests. I proposed making waiting work visible as stacks and picked the desk towers and pyramid from the options, and asked for a real office setting. I required a hard spending cap before testing with a real key, then ran live AI mode with my own key on routine, risky and fraudulent requests; those runs found problems (the model's wait counting against the deadline, invented names and approvals, replies cut mid-word, a staged change left after a request was denied) that were then fixed. I also had other people try the demo and brought back their feedback (unreadable floor labels, a confusing whiteboard, tour wording that did not match the scene, mouse-only hints on touch screens, name tags drifting from their robots, and the idea for the checklist). I reviewed each change and tested the deployed demo in my own browser.
-
-## Project structure
-
-```
-src/
-  sim/        workflow engine, mock data, dashboard metrics, floor plan, tests (no UI code)
-  ai/         prompt building and the Anthropic client, tests
-  state/      engine instance, tick loop, persistence, UI state
-  scene/      3D office, agents, task boxes, handoff arcs, camera
-  ui/         panels, dashboard, tour, inspector, dialogs, floating labels
-e2e/          browser tests: the built site in headless Chrome, with the Claude API mocked
-docs/         screenshots used in this README
-.github/      test, build and deploy workflow
-```
+- **My role** was to set the direction and own the result:
+  - I supplied the brief and the quality bar (a carefully planned, visually polished, smooth-running demo).
+  - After the first version I chose what to build next: the guided tour, live AI mode, the dashboard, mobile polish, response targets, the value panel, the audit export, consults between agents, the in-app checklist and the browser tests. I proposed making waiting work visible as stacks and picked the desk towers and pyramid from the options, and asked for a real office setting.
+  - I required a hard spending cap before testing with a real key, then ran live AI mode with my own key on routine, risky and fraudulent requests. Those runs found problems (the model's wait counting against the deadline, invented names and approvals, replies cut mid-word, a staged change left after a request was denied) that were then fixed.
+  - I reviewed each change and tested the deployed demo in my own browser.
